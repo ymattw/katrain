@@ -1,5 +1,33 @@
 # <a name="manual"></a> KaTrain
 
+> [!NOTE]
+>
+> This is a personal fork of
+> [sanderland/katrain](https://github.com/sanderland/katrain). Ongoing work
+> happens on the `dev` branch, which is rebased onto the latest upstream release
+> from time to time. On top of the current base (**v1.20.0**) it adds:
+>
+> - A `Makefile` for local development.
+> - Node deletion with <kbd>Backspace</kbd> / <kbd>Del</kbd>
+>   (<kbd>Ctrl+Del</kbd> still works).
+> - <kbd>Ctrl</kbd>+<kbd>Z</kbd> / <kbd>Cmd</kbd>+<kbd>Z</kbd> undo for deleted
+>   nodes and pruned branches.
+> - Loading game records from Fox Weiqi (foxwq.com) by username.
+>
+> **Building from this fork**
+>
+> Requirements: [uv](https://docs.astral.sh/uv/), and a POSIX shell (Git Bash on
+> Windows). On macOS needs the Xcode command line tools and Homebrew too.
+>
+> ```bash
+> git clone https://github.com/ymattw/katrain.git
+> cd katrain
+>
+> make deps       # install/verify build dependencies
+> make run        # run from source
+> make build      # engine + app + native distributable, outputs are in dist/ and package/
+> ```
+
 [![Latest Release](https://img.shields.io/github/release/sanderland/katrain?label=download)](https://github.com/sanderland/katrain/releases)
 [![License:MIT](https://img.shields.io/pypi/l/katrain)](https://en.wikipedia.org/wiki/MIT_License)
 [![GitHub Downloads](https://img.shields.io/github/downloads/sanderland/katrain/total?color=%23336699&label=github%20downloads)](https://github.com/sanderland/katrain/releases)
