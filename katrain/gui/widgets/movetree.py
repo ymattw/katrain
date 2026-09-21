@@ -322,7 +322,7 @@ Builder.load_string(
     MoveTreeDropdownItem:
         text: i18n._("Delete Node")
         icon: 'delete.png'
-        shortcut: 'Ctr+Del'
+        shortcut: 'Del'
         on_action: root.katrain.controls.move_tree.delete_selected_node()
         -background_color: Theme.LIGHTER_BACKGROUND_COLOR
         -height: dp(45)

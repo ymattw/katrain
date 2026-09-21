@@ -795,7 +795,7 @@ class KaTrainGui(Screen, KaTrainBase):
             self.controls.move_tree.make_selected_node_main_branch()
         elif keycode[1] == Theme.KEY_NAV_MISTAKE and not ctrl_pressed:
             self("find-mistake", "undo" if shift_pressed else "redo")
-        elif keycode[1] == Theme.KEY_MOVE_TREE_DELETE_SELECTED_NODE and ctrl_pressed:
+        elif keycode[1] in Theme.KEY_MOVE_TREE_DELETE_SELECTED_NODE and not shift_pressed:
             self.controls.move_tree.delete_selected_node()
         elif keycode[1] == Theme.KEY_MOVE_TREE_TOGGLE_SELECTED_NODE_COLLAPSE and not ctrl_pressed:
             self.controls.move_tree.toggle_selected_node_collapse()
