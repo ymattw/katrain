@@ -1126,3 +1126,51 @@ msgstr "Zugnummern auf dem Brett anzeigen (mit 'm' umschalten)"
 msgid "general:anim_pv_moves"
 msgstr ""
 "Anzahl der Züge bei der Animation einer Zugfolge (0 = keine Animation)"
+
+msgid "No matching user found"
+msgstr "Kein passender Benutzer gefunden"
+
+msgid "Loading game..."
+msgstr "Partie wird geladen..."
+
+msgid "Show more"
+msgstr "Mehr anzeigen"
+
+msgid "This account has no public games"
+msgstr "Dieses Konto hat keine öffentlichen Partien"
+
+msgid "Search"
+msgstr "Suchen"
+
+msgid "Local machine"
+msgstr "Lokaler Computer"
+
+msgid "Searching..."
+msgstr "Suche..."
+
+msgid "Load"
+msgstr "Laden"
+
+msgid "Found {} games"
+msgstr "{} Partien gefunden"
+
+msgid "Showing {} of {} games"
+msgstr "Zeige {} von {} Partien"
+
+msgid "{} moves"
+msgstr "{} Züge"
+
+msgid "Fox Weiqi"
+msgstr "Fox Weiqi"
+
+msgid "Fox username"
+msgstr "Fox-Benutzername"
+
+msgid "Please enter a username"
+msgstr "Bitte einen Benutzernamen eingeben"
+
+msgid "Showing {} games"
+msgstr "Zeige {} Partien"
+
+msgid "Loading more games..."
+msgstr "Weitere Partien werden geladen..."

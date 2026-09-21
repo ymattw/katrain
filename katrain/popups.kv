@@ -1094,13 +1094,162 @@
                 root.katrain("tsumego-frame", ko=ko.input_value, margin=margin.input_value)
                 root.popup.dismiss()
 
+<LoadSourceTab@SizedToggleButton>:
+    inactive_background_color: Theme.LIGHTER_BACKGROUND_COLOR
+    active_background_color: Theme.PLAY_ANALYZE_TAB_COLOR
+    ripple_color: Theme.LIGHTER_BACKGROUND_COLOR
+    text_color: self.inactive_background_color if self.state=='down' else self.active_background_color
+    size_hint: 0.5, 1
+    _font_size: self.height * 0.45
+    group: 'load_source'
+    allow_no_selection: False
+
+<RemoteGameRow>:
+    size_hint: 1, None
+    height: dp(30)
+    orientation: 'horizontal'
+    padding: [dp(8), 0]
+    spacing: dp(6)
+    canvas.before:
+        Color:
+            rgba: Theme.LIGHTER_BACKGROUND_COLOR if self.state == 'down' else [0, 0, 0, 0]
+        Rectangle:
+            pos: self.pos
+            size: self.size
+    Label:
+        size_hint_x: None
+        width: dp(124)
+        text_size: self.size
+        halign: 'left'
+        valign: 'middle'
+        font_name: i18n.font_name
+        color: Theme.TEXT_COLOR
+        text: root.date_text
+    Label:
+        text_size: self.size
+        halign: 'left'
+        valign: 'middle'
+        shorten: True
+        font_name: i18n.font_name
+        color: Theme.TEXT_COLOR
+        text: root.players_text
+    Label:
+        size_hint_x: None
+        width: dp(64)
+        text_size: self.size
+        halign: 'left'
+        valign: 'middle'
+        font_name: i18n.font_name
+        color: root.row_color
+        text: root.result_text
+    Label:
+        size_hint_x: None
+        width: dp(90)
+        text_size: self.size
+        halign: 'left'
+        valign: 'middle'
+        font_name: i18n.font_name
+        color: Theme.TEXT_COLOR
+        text: i18n._("{} moves").format(root.move_count) if root.move_count is not None else ''
+
+<OnlineGamePanel>:
+    orientation: 'vertical'
+    padding: CP_PADDING
+    spacing: CP_SPACING
+    BoxLayout:
+        orientation: 'horizontal'
+        spacing: CP_SPACING
+        BoxLayout:
+            orientation: 'vertical'
+            size_hint_x: 0.32
+            size_hint_y: None
+            height: self.minimum_height
+            pos_hint: {'top': 1}
+            spacing: CP_SPACING
+            DescriptionLabel:
+                text: i18n._(root.source.query_label) if root.source else ''
+                size_hint_y: None
+                height: dp(24)
+                halign: 'left'
+            TextInput:
+                id: query
+                multiline: False
+                size_hint_y: None
+                height: dp(38)
+                halign: 'left'
+                font_name: i18n.font_name
+                # Use the real line height so Kivy's `_adjust_viewport` leaves no negative
+                # viewport (which would make scroll_y jump while typing).
+                padding_y: max(0, (self.height - self.line_height) / 2)
+                on_text_validate: root.search()
+            AutoSizedRoundedRectangleButton:
+                id: search_button
+                text: i18n._('Search')
+                size_hint_y: None
+                height: dp(38) if root.query_valid else 0
+                opacity: 1 if root.query_valid else 0
+                padding_x: 15
+                on_release: root.search()
+            Label:
+                id: status
+                size_hint_y: None
+                height: dp(64)
+                text_size: self.width, None
+                halign: 'left'
+                valign: 'top'
+                font_name: i18n.font_name
+                color: Theme.ERROR_BORDER_COLOR if root.status_error else Theme.TEXT_COLOR
+                text: root.status_text
+        BoxLayout:
+            orientation: 'vertical'
+            size_hint_x: 0.68
+            spacing: CP_SPACING
+            ScrollView:
+                BoxLayout:
+                    id: game_list
+                    orientation: 'vertical'
+                    size_hint_y: None
+                    height: self.minimum_height
+                    spacing: 1
+            BoxLayout:
+                size_hint_y: None
+                height: dp(40)
+                spacing: CP_SPACING
+                AutoSizedRoundedRectangleButton:
+                    id: show_more_button
+                    text: i18n._('Show more')
+                    size_hint_y: 1
+                    width: self.label.texture_size[0] if root.has_more else 0
+                    padding_x: 15
+                    opacity: 1 if root.has_more else 0
+                    on_release: root.show_more()
+                Widget:
+                    size_hint_x: 1
+                AutoSizedRoundedRectangleButton:
+                    id: load_button
+                    text: i18n._('Load')
+                    size_hint_y: 1
+                    padding_x: 15
+                    on_release: root.load_selected()
+
 <LoadSGFPopup>:
     fast: fast
     rewind: rewind
     filesel: filesel
     orientation: 'vertical'
+    BoxLayout:
+        size_hint_y: None
+        height: dp(40)
+        LoadSourceTab:
+            text: i18n._('Local machine')
+            state: 'down'
+            on_state: if self.state=='down': root.select_source('local')
+        LoadSourceTab:
+            text: i18n._('Fox Weiqi')
+            on_state: if self.state=='down': root.select_source('fox')
     AnchorLayout:
-        size_hint: 1,1
+        size_hint_y: None
+        height: dp(48)
         BoxLayout:
             size_hint: 0.5,1
             orientation: 'horizontal'
@@ -1121,13 +1270,19 @@
                 active: True
                 size_hint: 0.05,1
                 input_property: "general/load_sgf_rewind"
-    I18NFileBrowser:
-        id: filesel
-        multiselect: False
-        file_must_exist: True
-        filters: ["*.sgf","*.gib","*.ngf"]
-        path: "."
-        size_hint: 1,7
+    ScreenManager:
+        id: source_screens
+        Screen:
+            name: 'local'
+            I18NFileBrowser:
+                id: filesel
+                multiselect: False
+                file_must_exist: True
+                filters: ["*.sgf","*.gib","*.ngf"]
+                path: "."
+        Screen:
+            name: 'fox'
+            id: fox_screen
 
 <SaveSGFPopup>:
     filesel: filesel

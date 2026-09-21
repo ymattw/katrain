@@ -45,6 +45,9 @@ class Theme:
     MENU_ITEM_FONT_COLOR = WHITE
     MENU_ITEM_SHORTCUT_COLOR = LIGHT_GREY
     PLAY_ANALYZE_TAB_COLOR = YELLOW
+    ONLINE_GAME_WIN_COLOR = GREEN
+    ONLINE_GAME_LOSS_COLOR = RED
+    ONLINE_GAME_DRAW_COLOR = LIGHT_GREY
     INPUT_FONT_COLOR = WHITE
     INPUT_LINE_COLOR = [1, 1, 1, 0.12]  # resting underline of a text field
     INPUT_HINT_COLOR = [1, 1, 1, 0.5]  # hint and helper text of a text field

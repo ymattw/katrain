@@ -1142,3 +1142,51 @@ msgstr "Показувати номери ходів на дошці (перем
 msgid "general:anim_pv_moves"
 msgstr ""
 "Скільки ходів показувати під час анімації послідовності (0 — не анімувати)"
+
+msgid "No matching user found"
+msgstr "Користувача не знайдено"
+
+msgid "Loading game..."
+msgstr "Завантаження партії..."
+
+msgid "Show more"
+msgstr "Показати більше"
+
+msgid "This account has no public games"
+msgstr "У цього акаунта немає публічних партій"
+
+msgid "Search"
+msgstr "Пошук"
+
+msgid "Local machine"
+msgstr "Локальний комп'ютер"
+
+msgid "Searching..."
+msgstr "Пошук..."
+
+msgid "Load"
+msgstr "Завантажити"
+
+msgid "Found {} games"
+msgstr "Знайдено {} партій"
+
+msgid "Showing {} of {} games"
+msgstr "Показано {} з {} партій"
+
+msgid "{} moves"
+msgstr "{} ходів"
+
+msgid "Fox Weiqi"
+msgstr "Fox Weiqi"
+
+msgid "Fox username"
+msgstr "Ім'я користувача Fox"
+
+msgid "Please enter a username"
+msgstr "Введіть ім'я користувача"
+
+msgid "Showing {} games"
+msgstr "Показано {} партій"
+
+msgid "Loading more games..."
+msgstr "Завантаження більше партій..."

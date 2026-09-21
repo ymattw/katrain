@@ -1035,3 +1035,51 @@ msgstr "在棋盘上显示手数（按 'm' 键切换）"
 
 msgid "general:anim_pv_moves"
 msgstr "演示变化时显示的手数（0 表示不演示）"
+
+msgid "No matching user found"
+msgstr "未找到匹配的用户"
+
+msgid "Loading game..."
+msgstr "正在加载对局..."
+
+msgid "Show more"
+msgstr "显示更多"
+
+msgid "This account has no public games"
+msgstr "该账号没有公开对局"
+
+msgid "Search"
+msgstr "搜索"
+
+msgid "Local machine"
+msgstr "本地文件"
+
+msgid "Searching..."
+msgstr "搜索中..."
+
+msgid "Load"
+msgstr "加载"
+
+msgid "Found {} games"
+msgstr "找到 {} 盘对局"
+
+msgid "Showing {} of {} games"
+msgstr "显示 {} / {} 盘对局"
+
+msgid "{} moves"
+msgstr "{}手"
+
+msgid "Fox Weiqi"
+msgstr "野狐围棋"
+
+msgid "Fox username"
+msgstr "野狐用户名"
+
+msgid "Please enter a username"
+msgstr "请输入用户名"
+
+msgid "Showing {} games"
+msgstr "显示 {} 盘对局"
+
+msgid "Loading more games..."
+msgstr "正在加载更多对局..."

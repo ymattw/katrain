@@ -41,6 +41,7 @@ from katrain.gui.widgets.material import (
     RectangularRippleBehavior,
 )
 from katrain.gui.widgets.movetree import MoveTree
+from katrain.gui.widgets.onlinegames import OnlineGamePanel, RemoteGameRow
 from katrain.gui.widgets.panels import (
     AnalysisToggle,
     CollapsablePanel,
@@ -82,11 +83,13 @@ __all__ = [
     "MoveTree",
     "NavigationDrawer",
     "NavigationLayout",
+    "OnlineGamePanel",
     "PauseButton",
     "PlayerInfo",
     "PlayerSetup",
     "PlayerSetupBlock",
     "RectangularRippleBehavior",
+    "RemoteGameRow",
     "ScoreGraph",
     "ScrollableLabel",
     "SelectionSlider",

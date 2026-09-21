@@ -1096,3 +1096,51 @@ msgid "general:anim_pv_moves"
 msgstr ""
 "Nombre de coups affichés lors de l'animation d'une séquence (0 pour "
 "désactiver)"
+
+msgid "No matching user found"
+msgstr "Aucun utilisateur correspondant trouvé"
+
+msgid "Loading game..."
+msgstr "Chargement de la partie..."
+
+msgid "Show more"
+msgstr "Afficher plus"
+
+msgid "This account has no public games"
+msgstr "Ce compte n'a pas de parties publiques"
+
+msgid "Search"
+msgstr "Rechercher"
+
+msgid "Local machine"
+msgstr "Machine locale"
+
+msgid "Searching..."
+msgstr "Recherche..."
+
+msgid "Load"
+msgstr "Charger"
+
+msgid "Found {} games"
+msgstr "{} parties trouvées"
+
+msgid "Showing {} of {} games"
+msgstr "Affichage de {} sur {} parties"
+
+msgid "{} moves"
+msgstr "{} coups"
+
+msgid "Fox Weiqi"
+msgstr "Fox Weiqi"
+
+msgid "Fox username"
+msgstr "Nom d'utilisateur Fox"
+
+msgid "Please enter a username"
+msgstr "Veuillez saisir un nom d'utilisateur"
+
+msgid "Showing {} games"
+msgstr "Affichage de {} parties"
+
+msgid "Loading more games..."
+msgstr "Chargement de plus de parties..."

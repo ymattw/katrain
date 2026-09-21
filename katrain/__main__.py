@@ -590,6 +590,20 @@ class KaTrainGui(Screen, KaTrainBase):
         if not rewind:
             self.game.redo(999)
 
+    def load_sgf_content(self, sgf_content, fast=False, rewind=True):
+        """Load an SGF provided as text, e.g. downloaded from an online server."""
+        if self.contributing:
+            return
+        try:
+            move_tree = KaTrainSGF.parse_sgf(sgf_content)
+        except ParseError as e:
+            self.log(i18n._("Failed to load SGF").format(error=e), OUTPUT_ERROR)
+            return
+        # Empty filename marks this as a loaded game (human players) while Ctrl-S still opens Save As.
+        self._do_new_game(move_tree=move_tree, analyze_fast=fast, sgf_filename="")
+        if not rewind:
+            self.game.redo(999)
+
     def _do_analyze_sgf_popup(self):
         if not self.fileselect_popup:
             popup_contents = LoadSGFPopup(self)
@@ -597,6 +611,7 @@ class KaTrainGui(Screen, KaTrainBase):
             self.fileselect_popup = I18NPopup(
                 title_key="load sgf title", size=[dp(1200), dp(800)], content=popup_contents
             ).__self__
+            popup_contents.popup = self.fileselect_popup
 
             def readfile(*_args):
                 filename = popup_contents.filesel.filename

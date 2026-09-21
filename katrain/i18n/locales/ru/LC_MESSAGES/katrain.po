@@ -1055,3 +1055,51 @@ msgid "general:anim_pv_moves"
 msgstr ""
 "Сколько ходов показывать при анимации последовательности (0 — не "
 "анимировать)"
+
+msgid "No matching user found"
+msgstr "Пользователь не найден"
+
+msgid "Loading game..."
+msgstr "Загрузка партии..."
+
+msgid "Show more"
+msgstr "Показать ещё"
+
+msgid "This account has no public games"
+msgstr "У этого аккаунта нет публичных партий"
+
+msgid "Search"
+msgstr "Поиск"
+
+msgid "Local machine"
+msgstr "Локальный компьютер"
+
+msgid "Searching..."
+msgstr "Поиск..."
+
+msgid "Load"
+msgstr "Загрузить"
+
+msgid "Found {} games"
+msgstr "Найдено {} партий"
+
+msgid "Showing {} of {} games"
+msgstr "Показано {} из {} партий"
+
+msgid "{} moves"
+msgstr "{} ходов"
+
+msgid "Fox Weiqi"
+msgstr "Fox Weiqi"
+
+msgid "Fox username"
+msgstr "Имя пользователя Fox"
+
+msgid "Please enter a username"
+msgstr "Введите имя пользователя"
+
+msgid "Showing {} games"
+msgstr "Показано {} партий"
+
+msgid "Loading more games..."
+msgstr "Загрузка ещё партий..."

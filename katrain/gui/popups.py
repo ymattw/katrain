@@ -36,6 +36,7 @@ from katrain.core.constants import (
     SGF_INTERNAL_COMMENTS_MARKER,
 )
 from katrain.core.engine import resolve_engine_backend
+from katrain.core.fox import FoxGameSource
 from katrain.core.lang import i18n, rank_label
 from katrain.core.utils import PATHS, find_package_resource
 from katrain.gui.theme import Theme
@@ -43,6 +44,7 @@ from katrain.gui.widgets.base import BackgroundMixin
 from katrain.gui.widgets.inputs import I18NSpinner
 from katrain.gui.widgets.labels import TableCellLabel, TableHeaderLabel, TableStatLabel
 from katrain.gui.widgets.material import MaterialCheckBox, MaterialTextField
+from katrain.gui.widgets.onlinegames import OnlineGamePanel
 from katrain.gui.widgets.progress_loader import ProgressLoader
 
 
@@ -845,6 +847,8 @@ class ContributePopup(BaseConfigPopup):
 
 
 class LoadSGFPopup(BaseConfigPopup):
+    current_source = StringProperty("local")
+
     def __init__(self, katrain):
         super().__init__(katrain)
         app = App.get_running_app()
@@ -854,9 +858,18 @@ class LoadSGFPopup(BaseConfigPopup):
         ]
         self.filesel.path = os.path.abspath(os.path.expanduser(app.gui.config("general/sgf_load")))
         self.filesel.select_string = "Load File"
+        self.fox_panel = OnlineGamePanel(source=FoxGameSource(), katrain=katrain, load_popup=self)
+        self.ids.fox_screen.add_widget(self.fox_panel)
+
+    def select_source(self, key):
+        self.current_source = key
+        self.ids.source_screens.current = key
 
     def on_submit(self):
-        self.filesel.button_clicked()
+        if self.current_source == "fox":
+            self.fox_panel.on_submit()
+        else:
+            self.filesel.button_clicked()
 
 
 class SaveSGFPopup(BoxLayout):

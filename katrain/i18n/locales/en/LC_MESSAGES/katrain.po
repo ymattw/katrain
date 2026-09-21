@@ -1129,3 +1129,52 @@ msgstr "Custom command"
 
 msgid "engine:backend:note"
 msgstr "The selected tab determines the engine used."
+
+#. Loading games from an online server
+msgid "Local machine"
+msgstr "Local machine"
+
+msgid "Fox Weiqi"
+msgstr "Fox Weiqi"
+
+msgid "Fox username"
+msgstr "Fox username"
+
+msgid "Search"
+msgstr "Search"
+
+msgid "Show more"
+msgstr "Show more"
+
+msgid "Load"
+msgstr "Load"
+
+msgid "Please enter a username"
+msgstr "Please enter a username"
+
+msgid "Searching..."
+msgstr "Searching..."
+
+msgid "No matching user found"
+msgstr "No matching user found"
+
+msgid "This account has no public games"
+msgstr "This account has no public games"
+
+msgid "Found {} games"
+msgstr "Found {} games"
+
+msgid "Showing {} games"
+msgstr "Showing {} games"
+
+msgid "Showing {} of {} games"
+msgstr "Showing {} of {} games"
+
+msgid "Loading more games..."
+msgstr "Loading more games..."
+
+msgid "Loading game..."
+msgstr "Loading game..."
+
+msgid "{} moves"
+msgstr "{} moves"
