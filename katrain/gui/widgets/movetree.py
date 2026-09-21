@@ -73,25 +73,41 @@ class MoveTreeCanvas(Widget):
     def delete_selected_node(self):
         selected_node = self.menu_selected_node or self.scroll_view_widget.current_node
         if selected_node and selected_node.parent:
+            game = App.get_running_app().gui.game
             if selected_node.shortcut_from:
                 parent = selected_node.shortcut_from
                 via = [v for m, v in parent.shortcuts_to if m == selected_node]
                 selected_node.remove_shortcut()
                 if via:  # should always be
-                    parent.children.remove(via[0])
+                    child = via[0]
+                    game.record_deletion(parent, child, parent.children.index(child), shortcut_node=selected_node)
+                    parent.children.remove(child)
             else:
                 parent = selected_node.parent
+                game.record_deletion(parent, selected_node, parent.children.index(selected_node))
                 parent.children.remove(selected_node)
             self.set_game_node(parent)
         self.is_open = False
 
+    def undo_deletion(self):
+        node = App.get_running_app().gui.game.undo_deletion()
+        if node is not None:
+            self.set_game_node(node)
+            return True
+        return False
+
     def prune_branch(self):
         selected_node = self.menu_selected_node
         if selected_node and selected_node.parent:
+            game = App.get_running_app().gui.game
+            children_backup = []
             node = selected_node
             while node.parent is not None:
+                children_backup.append((node.parent, list(node.parent.children)))
                 node.parent.children = [node]
                 node = node.parent
+            if any(len(children) > 1 for _parent, children in children_backup):
+                game.record_prune(selected_node, children_backup)
             self.set_game_node(selected_node)
         self.is_open = False
 
@@ -239,6 +255,12 @@ class MoveTree(ScrollView, BackgroundMixin):
     def delete_selected_node(self):
         self.move_tree_canvas.delete_selected_node()
         self.redraw_tree_trigger()
+
+    def undo_deletion(self):
+        if self.move_tree_canvas.undo_deletion():
+            self.redraw_tree_trigger()
+            return True
+        return False
 
     def prune_branch(self):
         self.move_tree_canvas.prune_branch()
