@@ -13,6 +13,7 @@
 > - <kbd>Ctrl</kbd>+<kbd>Z</kbd> / <kbd>Cmd</kbd>+<kbd>Z</kbd> undo for deleted
 >   nodes and pruned branches.
 > - Loading game records from Fox Weiqi (foxwq.com) by username.
+> - Loading game records from OGS (online-go.com) by username.
 >
 > **Building from this fork**
 >
