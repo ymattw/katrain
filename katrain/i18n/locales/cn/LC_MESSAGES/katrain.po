@@ -1083,3 +1083,9 @@ msgstr "显示 {} 盘对局"
 
 msgid "Loading more games..."
 msgstr "正在加载更多对局..."
+
+msgid "OGS"
+msgstr "OGS"
+
+msgid "OGS username"
+msgstr "OGS 用户名"

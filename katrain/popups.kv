@@ -1099,7 +1099,8 @@
     active_background_color: Theme.PLAY_ANALYZE_TAB_COLOR
     ripple_color: Theme.LIGHTER_BACKGROUND_COLOR
     text_color: self.inactive_background_color if self.state=='down' else self.active_background_color
-    size_hint: 0.5, 1
+    size_hint_x: 1
+    size_hint_y: 1
     _font_size: self.height * 0.45
     group: 'load_source'
     allow_no_selection: False
@@ -1240,6 +1241,7 @@
     BoxLayout:
         size_hint_y: None
         height: dp(40)
+        spacing: CP_SPACING
         LoadSourceTab:
             text: i18n._('Local machine')
             state: 'down'
@@ -1247,6 +1249,9 @@
         LoadSourceTab:
             text: i18n._('Fox Weiqi')
             on_state: if self.state=='down': root.select_source('fox')
+        LoadSourceTab:
+            text: i18n._('OGS')
+            on_state: if self.state=='down': root.select_source('ogs')
     AnchorLayout:
         size_hint_y: None
         height: dp(48)
@@ -1283,6 +1288,9 @@
         Screen:
             name: 'fox'
             id: fox_screen
+        Screen:
+            name: 'ogs'
+            id: ogs_screen
 
 <SaveSGFPopup>:
     filesel: filesel

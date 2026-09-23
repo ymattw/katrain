@@ -38,6 +38,7 @@ from katrain.core.constants import (
 from katrain.core.engine import resolve_engine_backend
 from katrain.core.fox import FoxGameSource
 from katrain.core.lang import i18n, rank_label
+from katrain.core.ogs import OgsGameSource
 from katrain.core.utils import PATHS, find_package_resource
 from katrain.gui.theme import Theme
 from katrain.gui.widgets.base import BackgroundMixin
@@ -858,16 +859,20 @@ class LoadSGFPopup(BaseConfigPopup):
         ]
         self.filesel.path = os.path.abspath(os.path.expanduser(app.gui.config("general/sgf_load")))
         self.filesel.select_string = "Load File"
-        self.fox_panel = OnlineGamePanel(source=FoxGameSource(), katrain=katrain, load_popup=self)
-        self.ids.fox_screen.add_widget(self.fox_panel)
+        # One panel per online source, keyed like the tab/screen names.
+        self.online_panels = {}
+        for name, source in (("fox", FoxGameSource()), ("ogs", OgsGameSource())):
+            panel = OnlineGamePanel(source=source, katrain=katrain, load_popup=self)
+            self.ids[f"{name}_screen"].add_widget(panel)
+            self.online_panels[name] = panel
 
     def select_source(self, key):
         self.current_source = key
         self.ids.source_screens.current = key
 
     def on_submit(self):
-        if self.current_source == "fox":
-            self.fox_panel.on_submit()
+        if self.current_source in self.online_panels:
+            self.online_panels[self.current_source].on_submit()
         else:
             self.filesel.button_clicked()
 

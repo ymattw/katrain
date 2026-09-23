@@ -1174,3 +1174,9 @@ msgstr "Zeige {} Partien"
 
 msgid "Loading more games..."
 msgstr "Weitere Partien werden geladen..."
+
+msgid "OGS"
+msgstr "OGS"
+
+msgid "OGS username"
+msgstr "OGS-Benutzername"

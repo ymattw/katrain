@@ -1108,3 +1108,9 @@ msgstr "顯示 {} 盤棋局"
 
 msgid "Loading more games..."
 msgstr "正在載入更多棋局..."
+
+msgid "OGS"
+msgstr "OGS"
+
+msgid "OGS username"
+msgstr "OGS 使用者名稱"

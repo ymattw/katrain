@@ -1140,6 +1140,12 @@ msgstr "Fox Weiqi"
 msgid "Fox username"
 msgstr "Fox username"
 
+msgid "OGS"
+msgstr "OGS"
+
+msgid "OGS username"
+msgstr "OGS username"
+
 msgid "Search"
 msgstr "Search"
 

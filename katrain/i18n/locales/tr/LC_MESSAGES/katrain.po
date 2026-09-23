@@ -1204,3 +1204,9 @@ msgstr "{} maç gösteriliyor"
 
 msgid "Loading more games..."
 msgstr "Daha fazla maç yükleniyor..."
+
+msgid "OGS"
+msgstr "OGS"
+
+msgid "OGS username"
+msgstr "OGS kullanıcı adı"

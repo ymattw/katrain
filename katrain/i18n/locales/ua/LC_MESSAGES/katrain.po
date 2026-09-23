@@ -1190,3 +1190,9 @@ msgstr "Показано {} партій"
 
 msgid "Loading more games..."
 msgstr "Завантаження більше партій..."
+
+msgid "OGS"
+msgstr "OGS"
+
+msgid "OGS username"
+msgstr "Ім'я користувача OGS"

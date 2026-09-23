@@ -1073,3 +1073,9 @@ msgstr "{}국 표시 중"
 
 msgid "Loading more games..."
 msgstr "더 많은 대국을 불러오는 중..."
+
+msgid "OGS"
+msgstr "OGS"
+
+msgid "OGS username"
+msgstr "OGS 사용자 이름"

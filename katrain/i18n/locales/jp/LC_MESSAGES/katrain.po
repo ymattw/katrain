@@ -1136,3 +1136,9 @@ msgstr "{}局を表示中"
 
 msgid "Loading more games..."
 msgstr "さらに読み込み中..."
+
+msgid "OGS"
+msgstr "OGS"
+
+msgid "OGS username"
+msgstr "OGS ユーザー名"

@@ -1103,3 +1103,9 @@ msgstr "Показано {} партий"
 
 msgid "Loading more games..."
 msgstr "Загрузка ещё партий..."
+
+msgid "OGS"
+msgstr "OGS"
+
+msgid "OGS username"
+msgstr "Имя пользователя OGS"
