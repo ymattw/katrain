@@ -48,6 +48,8 @@ class Theme:
     ONLINE_GAME_WIN_COLOR = GREEN
     ONLINE_GAME_LOSS_COLOR = RED
     ONLINE_GAME_DRAW_COLOR = LIGHT_GREY
+    # Stone dots (●) in the online game list.
+    ONLINE_GAME_STONE_COLORS = {"B": [0, 0, 0, 1], "W": [0.9, 0.9, 0.9, 1]}
     INPUT_FONT_COLOR = WHITE
     INPUT_LINE_COLOR = [1, 1, 1, 0.12]  # resting underline of a text field
     INPUT_HINT_COLOR = [1, 1, 1, 0.5]  # hint and helper text of a text field
@@ -107,7 +109,12 @@ class Theme:
     EVAL_DOT_MIN_SIZE = 0.25
 
     # board theme
-    APPROX_BOARD_COLOR = [0.95, 0.75, 0.47, 1]  # for drawing on top of / hiding what's under it
+    APPROX_BOARD_COLOR = [
+        0.95,
+        0.75,
+        0.47,
+        1,
+    ]  # for drawing on top of / hiding what's under it
     BOARD_COLOR_TINT = [1, 1, 1, 1]  # multiplied by texture
 
     HINT_TEXT_COLOR = BLACK
@@ -136,7 +143,9 @@ class Theme:
     OWNERSHIP_GAMMA = 1.33
     STONE_MIN_ALPHA = 0.85  # the minimal alpha for dead/weak stones
 
-    TERRITORY_DISPLAY = "blended"  # other possibilities are "marks", "blocks" or "shaded"
+    TERRITORY_DISPLAY = (
+        "blended"  # other possibilities are "marks", "blocks" or "shaded"
+    )
     BLOCKS_THRESHOLD = 0.3  # in "blocks" mode, territory which is this likely to be
     #                          a certain player's gets his color
     STONE_MARKS = "weak"  # all: always display marks on stones

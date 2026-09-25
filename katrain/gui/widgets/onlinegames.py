@@ -10,7 +10,7 @@ from kivy.uix.boxlayout import BoxLayout
 
 from katrain.core.constants import OUTPUT_ERROR
 from katrain.core.lang import i18n
-from katrain.gui.theme import Theme
+from katrain.gui.theme import Theme, to_hexcol
 
 _PAGE_SIZE = 10  # games fetched/rendered per page
 _QUERY_RE = re.compile(r"^[a-zA-Z0-9_-]+$")
@@ -249,19 +249,27 @@ class OnlineGamePanel(BoxLayout):
             self._set_status("Showing {} of {} games", self._shown, self._total)
 
     @staticmethod
-    def _player_label(name, rank):
+    def _escape_markup(text):
+        # Kivy markup treats [, ] and & specially; entities are expanded after
+        # parsing, so & must be escaped first.
+        return (text or "").replace("&", "&amp;").replace("[", "&bl;").replace("]", "&br;")
+
+    @classmethod
+    def _player_label(cls, name, rank):
+        name = cls._escape_markup(name)
         return f"{name}({rank})" if rank else name
 
     @classmethod
     def _matchup(cls, game):
-        # The circles are drawn in the label colour, so fill/hollow must follow the
-        # theme: with light text a filled circle (●) reads as a white stone and a
-        # hollow one (○) as black; with dark text it is the other way round.
-        # (U+26AB/U+26AA are not in KaTrain's CJK font, so these are used instead.)
-        light_text = sum(Theme.TEXT_COLOR[:3]) / 3 > 0.5
-        black_dot, white_dot = ("\u25cb", "\u25cf") if light_text else ("\u25cf", "\u25cb")
-        black = (black_dot, game.black_name, game.black_rank)
-        white = (white_dot, game.white_name, game.white_rank)
+        # A single filled circle glyph is used for both stones and coloured via
+        # markup. Pure black/white would disappear against parts of the row
+        # background, so both use a moderately contrasting grey instead.
+        # (U+26AB/U+26AA are not in KaTrain's CJK font, so U+25CF is used.)
+        def dot(color):
+            return f"[color={to_hexcol(color)}]\u25cf[/color]"
+
+        black = (dot(Theme.ONLINE_GAME_STONE_COLORS["B"]), game.black_name, game.black_rank)
+        white = (dot(Theme.ONLINE_GAME_STONE_COLORS["W"]), game.white_name, game.white_rank)
         # Always list the queried user first.
         first, second = (white, black) if game.user_color == "W" else (black, white)
         return (

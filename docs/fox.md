@@ -302,7 +302,8 @@ creates the `OnlineGamePanel` and adds it to the Fox `Screen`, and routes
   `~/.katrain/config.json` on the first search. Reads go through
   `config("general/fox_username", "")`, so a missing key is harmless.
 - `katrain/gui/theme.py`: `ONLINE_GAME_WIN_COLOR` (green),
-  `ONLINE_GAME_LOSS_COLOR` (red), `ONLINE_GAME_DRAW_COLOR` (grey).
+  `ONLINE_GAME_LOSS_COLOR` (red), `ONLINE_GAME_DRAW_COLOR` (grey),
+  `ONLINE_GAME_STONE_COLORS` (the greys used for the `●` stone dots).
 - i18n: add the new strings to `en` and translate the active locales.
 
 ## 5. Data flow
