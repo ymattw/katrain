@@ -394,6 +394,14 @@
                     input_property: "engine/wide_root_noise"
                     hint_text: i18n._("engine:wide_root_noise:hint")
 
+            DescriptionLabel:
+                text: 'Auto-tune thread counts'
+                size_hint_x: 1.5
+            AnchorLayout:
+                LabelledCheckBox:
+                    input_property: "engine/auto_threads"
+                    default_value: True
+
     # Bottom Section - Progress and Update Button
     BoxLayout:
         orientation: 'horizontal'

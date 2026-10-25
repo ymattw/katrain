@@ -27,6 +27,23 @@ from katrain.core.utils import find_package_resource, json_truncate_arrays
 ENGINE_BACKENDS = ("local", "remote", "custom")
 
 
+def auto_thread_settings(cpu_count=None):
+    """Pick KataGo thread counts that leave roughly one CPU core for the system.
+
+    The total number of KataGo search threads is `positions * threads`, so this returns
+    `(positions, threads)` with that product at most `max(2, cpu_count - 1)`. Two parallel
+    positions are used when there is enough budget, because searching different positions
+    in parallel is more efficient than many threads on one tree.
+    """
+    cores = max(2, int(cpu_count or os.cpu_count() or 4))
+    budget = max(2, cores - 1)
+    positions = 2 if budget >= 8 else 1
+    threads = max(1, budget // positions)
+    while positions * threads > budget:
+        threads -= 1
+    return positions, threads
+
+
 def resolve_engine_backend(config) -> str:
     """Which engine backend to use: 'local', 'remote' or 'custom'.
 
@@ -151,12 +168,20 @@ class KataGoEngine(BaseEngine):
                     self.command += ["-human-model", human_model_path]
                 else:
                     self.katrain.log(f"Human model not found at {human_model_path}", OUTPUT_ERROR)
-            self.command += [
-                "-config",
-                cfg,
-                "-override-config",
-                f"homeDataDir={os.path.expanduser(DATA_FOLDER)}",
-            ]
+            self.command += ["-config", cfg]
+            overrides = [f"homeDataDir={os.path.expanduser(DATA_FOLDER)}"]
+            # Limiting threads keeps the GPU batch (and the CPU contention from the search threads) small enough
+            # for the desktop to stay responsive. When auto_threads is disabled, analysis_config.cfg is used as-is.
+            if config.get("auto_threads", True):
+                analysis_threads, search_threads = auto_thread_settings()
+                self.katrain.log(
+                    f"Auto thread settings for {os.cpu_count()} CPUs: {analysis_threads} positions x {search_threads} threads",
+                    OUTPUT_DEBUG,
+                )
+                overrides.append(f"numAnalysisThreads={analysis_threads}")
+                overrides.append(f"numSearchThreads={search_threads}")
+            for override in overrides:
+                self.command += ["-override-config", override]
         self.start()
 
     def on_error(self, message, code=None, allow_popup=True):
