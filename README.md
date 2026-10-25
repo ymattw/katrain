@@ -14,6 +14,8 @@
 >   nodes and pruned branches.
 > - Loading game records from Fox Weiqi (foxwq.com) by username.
 > - Loading game records from OGS (online-go.com) by username.
+> - Automatic KataGo thread tuning based on CPU count, keeping the desktop
+>   responsive during full-game analysis.
 >
 > **Building from this fork**
 >
