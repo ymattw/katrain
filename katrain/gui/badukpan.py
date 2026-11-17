@@ -269,7 +269,7 @@ class BadukPanWidget(Widget):
                 mark_color = *Theme.EVAL_COLORS[self.trainer_config["theme"]][1][:3], 1
                 outline_color = mark_color
 
-            mark_size = Theme.MARK_SIZE * abs(ownership if ownership else min(1, loss)) * self.stone_size * 2.0
+            mark_size = Theme.MARK_SIZE * min(1, abs(ownership or loss or 0)) * self.stone_size * 2.0
             Color(*mark_color)
             Rectangle(
                 pos=(
