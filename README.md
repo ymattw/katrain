@@ -16,6 +16,9 @@
 > - Loading game records from OGS (online-go.com) by username.
 > - Automatic KataGo thread tuning based on CPU count, keeping the desktop
 >   responsive during full-game analysis.
+> - Lazy hover PV refinement: hovering a shallow candidate move pauses and
+>   drains background full-game analysis so KataGo can deepen its variation
+>   promptly, then resumes where it left off.
 >
 > **Building from this fork**
 >
