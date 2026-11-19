@@ -249,13 +249,14 @@ class KaTrainGui(Screen, KaTrainBase):
         self.controls.players["B"].captures = prisoners["B"]
 
         # update engine status dot
+        queued = self.game.queued_analyses if self.game else 0
         if not self.engine or not self.engine.check_alive():
             self.board_controls.engine_status_col = Theme.ENGINE_DOWN_COLOR
-        elif self.engine.is_idle():
+        elif self.engine.is_idle() and queued == 0:
             self.board_controls.engine_status_col = Theme.ENGINE_READY_COLOR
         else:
             self.board_controls.engine_status_col = Theme.ENGINE_BUSY_COLOR
-        self.board_controls.queries_remaining = self.engine.queries_remaining()
+        self.board_controls.queries_remaining = self.engine.queries_remaining() + queued
 
         # redraw board/stones
         if redraw_board:
@@ -306,7 +307,7 @@ class KaTrainGui(Screen, KaTrainBase):
                     self._do_ai_move(cn)
                     Clock.schedule_once(self._play_stone_sound, 0.25)
             if self.engine:
-                if self.pondering:
+                if self.pondering and not self.game.analysis_paused:
                     self.game.analyze_extra("ponder")
                 else:
                     self.engine.stop_pondering()

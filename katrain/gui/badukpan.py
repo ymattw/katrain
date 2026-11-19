@@ -20,6 +20,8 @@ from katrain.core.constants import (
     MODE_PLAY,
     OUTPUT_DEBUG,
     OUTPUT_EXTRA_DEBUG,
+    PONDERING_REPORT_DT,
+    PRIORITY_ALTERNATIVES,
     STATUS_TEACHING,
     TOP_MOVE_DELTA_SCORE,
     TOP_MOVE_DELTA_WINRATE,
@@ -35,6 +37,11 @@ from katrain.core.utils import evaluation_class, format_visits, json_truncate_ar
 from katrain.gui.popups import GameReportPopup, I18NPopup, ReAnalyzeGamePopup, TsumegoFramePopup
 from katrain.gui.theme import Theme
 from katrain.gui.widgets.drawing import cached_texture, draw_circle, draw_text
+
+HOVER_PV_MOVES = 10
+HOVER_PV_DEBOUNCE = 0.35
+HOVER_RESUME_DELAY = 2.0
+HOVER_TIMEOUT_DELAY = 15.0
 
 
 class BadukPanWidget(Widget):
@@ -56,10 +63,16 @@ class BadukPanWidget(Widget):
         self.animating_pv = None
         self.animating_pv_index = None
         self.last_mouse_pos = (0, 0)
+        self._hover_paused = False
+        self._hover_in_flight = 0
+        self._hover_game = None
         Window.bind(mouse_pos=self.on_mouse_pos)
         self.redraw_board_contents_trigger = Clock.create_trigger(self.draw_board_contents, 0.05)
         self.redraw_trigger = Clock.create_trigger(self.redraw, 0.05)
         self.redraw_hover_contents_trigger = Clock.create_trigger(self.draw_hover_contents, 0.01)
+        self.hover_refine_trigger = Clock.create_trigger(self._refine_hover_pv, HOVER_PV_DEBOUNCE)
+        self.hover_resume_trigger = Clock.create_trigger(self._resume_bulk_analysis, HOVER_RESUME_DELAY)
+        self.hover_timeout_trigger = Clock.create_trigger(self._on_hover_timeout, HOVER_TIMEOUT_DELAY)
         self.bind(size=self.redraw_trigger, pos=self.redraw_trigger)
         Clock.schedule_interval(self.animate_pv, 0.1)
 
@@ -157,7 +170,13 @@ class BadukPanWidget(Widget):
                     and abs(rel_pos[1] - self.gridpos[move[1]][move[0]][1]) < self.grid_size / 2
                 ]
                 if near_move:
-                    self.set_animating_pv(near_move[0][0], near_move[0][1])
+                    pv, node = max(near_move, key=lambda item: len(item[0]))
+                    if len(near_move) > 1 and self.katrain:
+                        self.katrain.log(
+                            f"[hover-pv] {len(near_move)} entries at {pv[0] if pv else '?'}, picked len={len(pv)}",
+                            OUTPUT_EXTRA_DEBUG,
+                        )
+                    self.set_animating_pv(pv, node)
                 elif self.animating_pv is not None:
                     self.set_animating_pv(None, None)  # any click kills PV from label/move
             if inside and self.animating_pv is not None:
@@ -1142,11 +1161,186 @@ class BadukPanWidget(Widget):
         self.animating_pv_index = None
         if pv is None:
             self.animating_pv = None
-        elif node is not None and (
-            not self.animating_pv or not (self.animating_pv[0] == pv and self.animating_pv[1] == node)
-        ):
-            self.animating_pv = (pv, node, time.time(), self.last_mouse_pos)
+            self.hover_refine_trigger.cancel()
+            if self._hover_paused and self._hover_in_flight == 0:
+                self.hover_resume_trigger.cancel()
+                self.hover_resume_trigger()
+        elif node is not None:
+            if (
+                self.animating_pv
+                and self.animating_pv[1] is node
+                and self.animating_pv[0]
+                and pv
+                and self.animating_pv[0][0] == pv[0]
+            ):
+                if self.animating_pv[0] != pv:
+                    self.animating_pv = (pv, node, self.animating_pv[2], self.last_mouse_pos)
+            else:
+                self.animating_pv = (pv, node, time.time(), self.last_mouse_pos)
+                self._maybe_schedule_refine(pv, node)
         self.redraw_hover_contents_trigger()
+
+    def _maybe_schedule_refine(self, pv, node):
+        self.hover_refine_trigger.cancel()
+        if not pv or node is None or not (self.katrain and self.katrain.game):
+            return
+        game = self.katrain.game
+        if node is not game.current_node:
+            return
+        if self._hover_game is not game:
+            self._hover_in_flight = 0
+            self._hover_paused = False
+            self._hover_game = game
+        gtp = pv[0]
+        skip_reason = None
+        if len(pv) >= HOVER_PV_MOVES:
+            skip_reason = f"already {len(pv)} moves (>= {HOVER_PV_MOVES})"
+        elif Move.from_gtp(gtp, player=node.next_player).is_pass:
+            skip_reason = "pass move"
+        elif gtp in getattr(node, "_hover_pv_requested", set()):
+            skip_reason = "already requested"
+        if skip_reason:
+            self.katrain.log(f"[hover-pv] skip {gtp}: {skip_reason}", OUTPUT_EXTRA_DEBUG)
+            if self._hover_paused and self._hover_in_flight == 0:
+                self.hover_resume_trigger.cancel()
+                self.hover_resume_trigger()
+            return
+
+        self.hover_resume_trigger.cancel()
+        game.pause_analysis()
+        self._hover_paused = True
+        self.katrain.log(f"[hover-pv] schedule refine for {gtp} (cur len={len(pv)})", OUTPUT_DEBUG)
+        self.hover_refine_trigger()
+
+    def _refine_hover_pv(self, *_args):
+        if not self.animating_pv or not (self.katrain and self.katrain.game):
+            return
+        game = self.katrain.game
+        if self._hover_game is not game:
+            self._hover_in_flight = 0
+            self._hover_paused = False
+            self._hover_game = game
+        pv, node, _start_time, _pos = self.animating_pv
+        if not pv or node is not game.current_node or len(pv) >= HOVER_PV_MOVES:
+            return
+        gtp = pv[0]
+        move = Move.from_gtp(gtp, player=node.next_player)
+        if move.is_pass:
+            return
+        if any(n.clear_placements for n in node.nodes_from_root):
+            return
+        requested = getattr(node, "_hover_pv_requested", None)
+        if requested is None:
+            node._hover_pv_requested = set()
+            requested = node._hover_pv_requested
+        if gtp in requested:
+            return
+
+        self.hover_resume_trigger.cancel()
+        game.pause_analysis()
+        self._hover_paused = True
+
+        if self._hover_in_flight > 0:
+            return
+
+        if game.analysis_inflight_count > 0:
+            self.katrain.log(
+                f"[hover-pv] waiting for {game.analysis_inflight_count} in-flight bulk queries to finish before refining {gtp}",
+                OUTPUT_DEBUG,
+            )
+            game.set_on_analysis_drained(lambda: Clock.schedule_once(self._refine_hover_pv, 0))
+            return
+
+        engine = game.engines[node.next_player]
+        requested.add(gtp)
+        cur_visits = (node.analysis.get("moves", {}).get(gtp) or {}).get("visits", 0)
+        visits = max(
+            self.katrain.config("engine/max_visits", 500),
+            cur_visits + self.katrain.config("engine/fast_visits", 25),
+        )
+        old_len = len(pv)
+        self._hover_in_flight += 1
+        self.hover_timeout_trigger.cancel()
+        self.hover_timeout_trigger()
+        self.katrain.log(f"[hover-pv] request refine {gtp} (cur len={old_len}, visits={visits})", OUTPUT_DEBUG)
+        try:
+            engine.request_analysis(
+                node,
+                callback=lambda result, partial_result, n=node, m=move, ol=old_len: self._on_hover_refined(
+                    n, m, ol, result, partial_result
+                ),
+                error_callback=lambda err, n=node, m=move: self._on_hover_error(n, m, err),
+                next_move=move,
+                visits=visits,
+                priority=PRIORITY_ALTERNATIVES,
+                time_limit=False,
+                report_every=PONDERING_REPORT_DT,
+            )
+        except Exception:
+            self._finish_hover_query()
+            raise
+
+    def _on_hover_refined(self, node, move, old_len, result, partial_result):
+        node.set_analysis(result, refine_move=move, partial_result=partial_result)
+        gtp = move.gtp()
+        pvtail = result["moveInfos"][0]["pv"] if result.get("moveInfos") else []
+        new_pv = [gtp] + pvtail
+        cur = node.analysis.get("moves", {}).get(gtp)
+        if cur is not None and len(new_pv) > len(cur.get("pv", [])):
+            cur["pv"] = new_pv
+
+        anim = self.animating_pv
+        if anim and anim[1] is node and anim[0] and anim[0][0] == gtp and len(new_pv) > len(anim[0]):
+            self.animating_pv = (new_pv, node, anim[2], anim[3])
+            self.redraw_hover_contents_trigger()
+
+        if partial_result:
+            if self.katrain:
+                self.katrain.log(f"[hover-pv] partial {gtp}: len {old_len} -> {len(new_pv)}", OUTPUT_EXTRA_DEBUG)
+            self.hover_timeout_trigger.cancel()
+            self.hover_timeout_trigger()
+        else:
+            if self.katrain:
+                self.katrain.log(f"[hover-pv] done {gtp}: len {old_len} -> {len(new_pv)}", OUTPUT_DEBUG)
+            self._finish_hover_query()
+
+    def _on_hover_error(self, node, move, error):
+        if self.katrain:
+            self.katrain.log(f"[hover-pv] error refining {move.gtp()}: {error}", OUTPUT_DEBUG)
+        self._finish_hover_query()
+
+    def _finish_hover_query(self):
+        self._hover_in_flight = max(0, self._hover_in_flight - 1)
+        if self._hover_in_flight == 0:
+            self.hover_timeout_trigger.cancel()
+            anim = self.animating_pv
+            if anim and self.katrain and self.katrain.game:
+                pv, node, _, _ = anim
+                if (
+                    pv
+                    and node is self.katrain.game.current_node
+                    and len(pv) < HOVER_PV_MOVES
+                    and not Move.from_gtp(pv[0], player=node.next_player).is_pass
+                    and pv[0] not in getattr(node, "_hover_pv_requested", set())
+                ):
+                    Clock.schedule_once(self._refine_hover_pv, 0)
+                    return
+            if self._hover_paused:
+                self.hover_resume_trigger.cancel()
+                self.hover_resume_trigger()
+
+    def _on_hover_timeout(self, *_args):
+        if self.katrain:
+            self.katrain.log("[hover-pv] hover refine timed out, resuming bulk analysis", OUTPUT_DEBUG)
+        self._hover_in_flight = 0
+        self._resume_bulk_analysis()
+
+    def _resume_bulk_analysis(self, *_args):
+        if self._hover_in_flight > 0:
+            return
+        self._hover_paused = False
+        if self.katrain and self.katrain.game:
+            self.katrain.game.resume_analysis()
 
     def adjust_animate_pv_index(self, delta=1):
         self.animating_pv_index = max(0, self.get_animate_pv_index() + delta)

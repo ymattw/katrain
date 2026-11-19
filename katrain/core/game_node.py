@@ -107,6 +107,7 @@ class GameNode(BaseGoNode["GameNode"]):
 
     def clear_analysis(self):
         self.analysis_visits_requested = 0
+        self._hover_pv_requested = set()
         self.analysis = {"moves": {}, "root": None, "ownership": None, "policy": None, "completed": False}
 
     def sgf_properties(

@@ -3,8 +3,9 @@ import math
 import os
 import re
 import threading
+import time
 from datetime import datetime
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Optional, Tuple, Union
 
 from pysgf import BaseGoGame, Move
 
@@ -21,6 +22,7 @@ from katrain.core.constants import (
     PRIORITY_GAME_ANALYSIS,
     PRIORITY_SWEEP,
     PROGRAM_NAME,
+    REPORT_DT,
     SGF_INTERNAL_COMMENTS_MARKER,
     STATUS_ANALYSIS,
     STATUS_ERROR,
@@ -492,23 +494,238 @@ class Game(BaseGame):
         self.insert_after = None
         self.region_of_interest = None
 
+        self._analysis_lock = threading.RLock()
+        self._analysis_queue: List[Dict] = []
+        self._analysis_inflight: Dict[object, Tuple[GameNode, float]] = {}
+        self._analysis_inflight_items: Dict[object, Dict] = {}
+        self._analysis_paused = False
+        self._on_analysis_drained = None
+        first_engine = next(iter(self.engines.values()), None)
+        default_limit = getattr(first_engine, "analysis_threads", None) or 4
+        self._analysis_limit = max(1, int(katrain.config("engine/analysis_limit") or default_limit))
+
         threading.Thread(
             target=lambda: self.analyze_all_nodes(analyze_fast=analyze_fast, even_if_present=False),
             daemon=True,
         ).start()  # return faster, but bypass Kivy Clock
+
+    @property
+    def analysis_paused(self) -> bool:
+        with self._analysis_lock:
+            return self._analysis_paused
+
+    @property
+    def analysis_inflight_count(self) -> int:
+        with self._analysis_lock:
+            self._prune_stale_inflight()
+            return len(self._analysis_inflight)
+
+    @property
+    def queued_analyses(self) -> int:
+        with self._analysis_lock:
+            return len(self._analysis_queue)
+
+    def set_on_analysis_drained(self, callback):
+        call_now = False
+        with self._analysis_lock:
+            self._prune_stale_inflight()
+            if self._analysis_inflight:
+                self._on_analysis_drained = callback
+            else:
+                self._on_analysis_drained = None
+                call_now = callback is not None
+        if call_now:
+            callback()
+
+    def _prune_stale_inflight(self):
+        if not self._analysis_inflight:
+            return
+        now = time.time()
+        all_idle = all(
+            (not hasattr(e, "queries") or not hasattr(e, "write_queue")) or e.is_idle()
+            for e in set(self.engines.values())
+        )
+        if not all_idle:
+            return
+        stale = [tok for tok, (_node, ts) in self._analysis_inflight.items() if now - ts > 0.5]
+        for tok in stale:
+            self._analysis_inflight.pop(tok, None)
+            self._analysis_inflight_items.pop(tok, None)
+
+    @staticmethod
+    def _is_analysis_item_done(item: Dict) -> bool:
+        node = item["node"]
+        return node.analysis_complete and (item["visits"] is None or node.root_visits >= item["visits"])
+
+    def _enqueue_analysis(
+        self,
+        node: GameNode,
+        priority=PRIORITY_GAME_ANALYSIS,
+        analyze_fast=False,
+        visits=None,
+        time_limit=True,
+        report_every=REPORT_DT,
+    ):
+        item = {
+            "node": node,
+            "priority": priority,
+            "analyze_fast": analyze_fast,
+            "visits": visits,
+            "time_limit": time_limit,
+            "report_every": report_every,
+        }
+        with self._analysis_lock:
+            self._analysis_queue = [q for q in self._analysis_queue if q["node"] is not node]
+            self._analysis_queue.append(item)
+
+    def _pop_next_analysis_item(self) -> Optional[Dict]:
+        with self._analysis_lock:
+            while self._analysis_queue and self._is_analysis_item_done(self._analysis_queue[0]):
+                self._analysis_queue.pop(0)
+            if not self._analysis_queue:
+                return None
+            priority_nodes = [
+                n for n in (self.current_node, getattr(self.current_node, "parent", None)) if n is not None
+            ]
+            for target in priority_nodes:
+                for idx, item in enumerate(self._analysis_queue):
+                    if item["node"] is target:
+                        item = self._analysis_queue.pop(idx)
+                        if not self._is_analysis_item_done(item):
+                            return item
+                        break
+            while self._analysis_queue:
+                item = self._analysis_queue.pop(0)
+                if not self._is_analysis_item_done(item):
+                    return item
+            return None
+
+    def _pump_analysis(self):
+        to_submit = []
+        with self._analysis_lock:
+            self._prune_stale_inflight()
+            while not self._analysis_paused and len(self._analysis_inflight) < self._analysis_limit:
+                item = self._pop_next_analysis_item()
+                if item is None:
+                    break
+                token = object()
+                self._analysis_inflight[token] = (item["node"], time.time())
+                self._analysis_inflight_items[token] = item
+                to_submit.append((token, item))
+        for token, item in to_submit:
+            self._submit_queued_analysis(token, item)
+
+    def _submit_queued_analysis(self, token, item: Dict):
+        node = item["node"]
+        engine = self.engines[node.next_player]
+        has_clear_placements = any(n.clear_placements for n in node.nodes_from_root)
+        if has_clear_placements or not hasattr(engine, "queries"):
+            if not has_clear_placements:
+                node.analyze(
+                    engine,
+                    priority=item["priority"],
+                    visits=item["visits"],
+                    analyze_fast=item["analyze_fast"],
+                    time_limit=item["time_limit"],
+                    report_every=item["report_every"],
+                )
+            self._finish_analysis_token(token)
+            return
+
+        def on_done(result, partial_result):
+            node.set_analysis(result, partial_result=partial_result)
+            if not partial_result:
+                self._finish_analysis_token(token)
+
+        def on_error(_err):
+            self._finish_analysis_token(token)
+
+        try:
+            engine.request_analysis(
+                node,
+                callback=on_done,
+                error_callback=on_error,
+                priority=item["priority"],
+                visits=item["visits"],
+                analyze_fast=item["analyze_fast"],
+                time_limit=item["time_limit"],
+                report_every=item["report_every"],
+            )
+        except Exception:
+            self._finish_analysis_token(token)
+            raise
+
+    def _finish_analysis_token(self, token):
+        drain_cb = None
+        with self._analysis_lock:
+            if self._analysis_inflight.pop(token, None) is None:
+                return
+            self._analysis_inflight_items.pop(token, None)
+            if not self._analysis_inflight and self._on_analysis_drained:
+                drain_cb = self._on_analysis_drained
+                self._on_analysis_drained = None
+        if drain_cb:
+            drain_cb()
+        self._pump_analysis()
+
+    def pause_analysis(self, terminate: Optional[bool] = None) -> bool:
+        if terminate is None:
+            terminate = bool(self.katrain.config("engine/hover_terminate_inflight", False))
+        to_terminate: List[GameNode] = []
+        drain_cb = None
+        with self._analysis_lock:
+            was_paused = self._analysis_paused
+            self._analysis_paused = True
+            if terminate and self._analysis_inflight:
+                requeue = []
+                queued_nodes = {q["node"] for q in self._analysis_queue}
+                for tok, (node, _ts) in self._analysis_inflight.items():
+                    to_terminate.append(node)
+                    item = self._analysis_inflight_items.get(tok)
+                    if item and not self._is_analysis_item_done(item) and node not in queued_nodes:
+                        requeue.append(item)
+                        queued_nodes.add(node)
+                if requeue:
+                    self._analysis_queue = requeue + self._analysis_queue
+                self._analysis_inflight.clear()
+                self._analysis_inflight_items.clear()
+                if self._on_analysis_drained:
+                    drain_cb = self._on_analysis_drained
+                    self._on_analysis_drained = None
+        for e in set(self.engines.values()):
+            if hasattr(e, "stop_pondering"):
+                e.stop_pondering()
+        for node in to_terminate:
+            engine = self.engines.get(node.next_player)
+            if engine and hasattr(engine, "terminate_queries"):
+                engine.terminate_queries(only_for_node=node)
+        if drain_cb:
+            drain_cb()
+        return not was_paused
+
+    def resume_analysis(self):
+        with self._analysis_lock:
+            self._analysis_paused = False
+            self._on_analysis_drained = None
+        self._pump_analysis()
+        if getattr(self.katrain, "update_state", None):
+            self.katrain.update_state()
 
     def analyze_all_nodes(self, priority=PRIORITY_GAME_ANALYSIS, analyze_fast=False, even_if_present=True):
         for node in self.root.nodes_in_tree:
             # forced, or not present, or something went wrong in loading
             if even_if_present or not node.analysis_from_sgf or not node.load_analysis():
                 node.clear_analysis()
-                node.analyze(self.engines[node.next_player], priority=priority, analyze_fast=analyze_fast)
+                self._enqueue_analysis(node, priority=priority, analyze_fast=analyze_fast)
+        self._pump_analysis()
 
     def set_current_node(self, node):
         if self.insert_mode:
             self.katrain.controls.set_status(i18n._("finish inserting before navigating"), STATUS_ERROR)
             return
         super().set_current_node(node)
+        if getattr(self, "_analysis_queue", None):
+            self._pump_analysis()
 
     def undo(self, n_times=1, stop_on_mistake=None):
         if self.insert_mode:  # in insert mode, undo = delete
@@ -617,6 +834,12 @@ class Game(BaseGame):
         cn = self.current_node
 
         if mode == "stop":
+            with self._analysis_lock:
+                self._analysis_queue.clear()
+                self._analysis_inflight.clear()
+                self._analysis_inflight_items.clear()
+                self._on_analysis_drained = None
+                self._analysis_paused = False
             self.katrain.pondering = False
             for e in set(self.engines.values()):
                 e.stop_pondering()
@@ -666,7 +889,8 @@ class Game(BaseGame):
                     continue
                 if move_range and (node.depth - 1 not in range(move_range[0], move_range[1] + 1)):
                     continue
-                node.analyze(engine, visits=visits, priority=-1_000_000, time_limit=False, report_every=None)
+                self._enqueue_analysis(node, priority=-1_000_000, visits=visits, time_limit=False, report_every=None)
+            self._pump_analysis()
             if not move_range:
                 self.katrain.controls.set_status(i18n._("game re-analysis").format(visits=visits), STATUS_ANALYSIS)
             else:

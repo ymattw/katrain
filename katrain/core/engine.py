@@ -148,6 +148,9 @@ class KataGoEngine(BaseEngine):
         self.write_queue = queue.Queue()
         # Reentrant because cancellation and pondering helpers reacquire it.
         self.thread_lock = threading.RLock()
+        self.analysis_threads = (
+            max(1, int(config["num_analysis_threads"])) if config.get("num_analysis_threads") else 12
+        )
         if resolve_engine_backend(config) == "custom":
             self.command = config["altcommand"]
             self.shell = True
@@ -172,8 +175,11 @@ class KataGoEngine(BaseEngine):
             overrides = [f"homeDataDir={os.path.expanduser(DATA_FOLDER)}"]
             # Limiting threads keeps the GPU batch (and the CPU contention from the search threads) small enough
             # for the desktop to stay responsive. When auto_threads is disabled, analysis_config.cfg is used as-is.
-            if config.get("auto_threads", True):
+            if config.get("num_analysis_threads"):
+                overrides.append(f"numAnalysisThreads={self.analysis_threads}")
+            elif config.get("auto_threads", True):
                 analysis_threads, search_threads = auto_thread_settings()
+                self.analysis_threads = analysis_threads
                 self.katrain.log(
                     f"Auto thread settings for {os.cpu_count()} CPUs: {analysis_threads} positions x {search_threads} threads",
                     OUTPUT_DEBUG,
@@ -399,6 +405,8 @@ class KataGoEngine(BaseEngine):
                     try:
                         if callback and results_exist:
                             callback(analysis, partial_result)
+                        elif not partial_result and not results_exist and error_callback:
+                            error_callback(analysis)
                     except Exception as e:
                         self.katrain.log(f"Error in engine callback for query {query_id}: {e}", OUTPUT_ERROR)
                         traceback.print_exc()
