@@ -97,6 +97,7 @@ class LabelledPathInput(LabelledTextInput):
 
 class LabelledCheckBox(MaterialCheckBox):
     input_property = StringProperty("")
+    default_value = BooleanProperty(False)
 
     def __init__(self, text=None, **kwargs):
         if text is not None:
@@ -217,7 +218,7 @@ class QuickConfigGui(BoxLayout):
         ) and getattr(widget, "input_property", None):
             value = self.get_setting(widget.input_property)[0]
             if isinstance(widget, LabelledCheckBox):
-                widget.active = value is True
+                widget.active = value is True if value != "" else widget.default_value
             elif isinstance(widget, LabelledSelectionSlider):
                 widget.set_value(value)
             elif isinstance(widget, LabelledSpinner):

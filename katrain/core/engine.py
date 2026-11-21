@@ -11,6 +11,7 @@ from typing import Callable, Dict, List, Optional
 from kivy.utils import platform as kivy_platform
 from pysgf import Move
 
+from katrain.core.auto_threads import resolve_thread_overrides
 from katrain.core.constants import (
     DATA_FOLDER,
     KATAGO_EXCEPTION,
@@ -131,6 +132,9 @@ class KataGoEngine(BaseEngine):
         self.write_queue = queue.Queue()
         # Reentrant because cancellation and pondering helpers reacquire it.
         self.thread_lock = threading.RLock()
+        self.analysis_threads, thread_overrides = resolve_thread_overrides(
+            config, log=lambda msg: self.katrain.log(msg, OUTPUT_DEBUG)
+        )
         if resolve_engine_backend(config) == "custom":
             self.command = config["altcommand"]
             self.shell = True
@@ -157,6 +161,7 @@ class KataGoEngine(BaseEngine):
                 "-override-config",
                 f"homeDataDir={os.path.expanduser(DATA_FOLDER)}",
             ]
+            self.command += thread_overrides
         self.start()
 
     def on_error(self, message, code=None, allow_popup=True):
