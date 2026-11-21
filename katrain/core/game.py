@@ -8,6 +8,7 @@ from typing import Dict, List, Optional, Union
 
 from pysgf import BaseGoGame, Move
 
+from katrain.core.analysis_scheduler import BulkAnalysisScheduler
 from katrain.core.constants import (
     OUTPUT_DEBUG,
     OUTPUT_EXTRA_DEBUG,
@@ -463,24 +464,50 @@ class Game(BaseGame):
         self.insert_mode = False
         self.insert_after = None
         self.region_of_interest = None
+        self._analysis_scheduler = BulkAnalysisScheduler(self)
 
         threading.Thread(
             target=lambda: self.analyze_all_nodes(analyze_fast=analyze_fast, even_if_present=False),
             daemon=True,
         ).start()  # return faster, but bypass Kivy Clock
 
+    @property
+    def analysis_paused(self) -> bool:
+        return self._analysis_scheduler.paused
+
+    @property
+    def analysis_inflight_count(self) -> int:
+        return self._analysis_scheduler.inflight_count
+
+    @property
+    def queued_analyses(self) -> int:
+        return self._analysis_scheduler.queued_count
+
+    def set_on_analysis_drained(self, callback):
+        self._analysis_scheduler.set_on_drained(callback)
+
+    def pause_analysis(self, terminate: Optional[bool] = None) -> bool:
+        return self._analysis_scheduler.pause(terminate=terminate)
+
+    def resume_analysis(self):
+        self._analysis_scheduler.resume()
+
     def analyze_all_nodes(self, priority=PRIORITY_GAME_ANALYSIS, analyze_fast=False, even_if_present=True):
         for node in self.root.nodes_in_tree:
             # forced, or not present, or something went wrong in loading
             if even_if_present or not node.analysis_from_sgf or not node.load_analysis():
                 node.clear_analysis()
-                node.analyze(self.engines[node.next_player], priority=priority, analyze_fast=analyze_fast)
+                self._analysis_scheduler.enqueue(node, priority=priority, analyze_fast=analyze_fast)
+        self._analysis_scheduler.pump()
 
     def set_current_node(self, node):
         if self.insert_mode:
             self.katrain.controls.set_status(i18n._("finish inserting before navigating"), STATUS_ERROR)
             return
         super().set_current_node(node)
+        scheduler = getattr(self, "_analysis_scheduler", None)
+        if scheduler and scheduler.queued_count:
+            scheduler.pump()
 
     def undo(self, n_times=1, stop_on_mistake=None):
         if self.insert_mode:  # in insert mode, undo = delete
@@ -589,6 +616,7 @@ class Game(BaseGame):
         cn = self.current_node
 
         if mode == "stop":
+            self._analysis_scheduler.clear()
             self.katrain.pondering = False
             for e in set(self.engines.values()):
                 e.stop_pondering()
@@ -638,7 +666,10 @@ class Game(BaseGame):
                     continue
                 if move_range and (node.depth - 1 not in range(move_range[0], move_range[1] + 1)):
                     continue
-                node.analyze(engine, visits=visits, priority=-1_000_000, time_limit=False, report_every=None)
+                self._analysis_scheduler.enqueue(
+                    node, priority=-1_000_000, visits=visits, time_limit=False, report_every=None
+                )
+            self._analysis_scheduler.pump()
             if not move_range:
                 self.katrain.controls.set_status(i18n._("game re-analysis").format(visits=visits), STATUS_ANALYSIS)
             else:

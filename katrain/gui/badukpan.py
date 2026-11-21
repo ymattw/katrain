@@ -32,6 +32,7 @@ from katrain.core.constants import (
 from katrain.core.game import Move
 from katrain.core.lang import i18n
 from katrain.core.utils import evaluation_class, format_visits, json_truncate_arrays, var_to_grid
+from katrain.gui.hover_pv import HoverPVRefiner
 from katrain.gui.popups import GameReportPopup, I18NPopup, ReAnalyzeGamePopup, TsumegoFramePopup
 from katrain.gui.theme import Theme
 from katrain.gui.widgets.drawing import cached_texture, draw_circle, draw_text
@@ -56,6 +57,7 @@ class BadukPanWidget(Widget):
         self.animating_pv = None
         self.animating_pv_index = None
         self.last_mouse_pos = (0, 0)
+        self._hover_refiner = HoverPVRefiner(self)
         Window.bind(mouse_pos=self.on_mouse_pos)
         self.redraw_board_contents_trigger = Clock.create_trigger(self.draw_board_contents, 0.05)
         self.redraw_trigger = Clock.create_trigger(self.redraw, 0.05)
@@ -157,7 +159,8 @@ class BadukPanWidget(Widget):
                     and abs(rel_pos[1] - self.gridpos[move[1]][move[0]][1]) < self.grid_size / 2
                 ]
                 if near_move:
-                    self.set_animating_pv(near_move[0][0], near_move[0][1])
+                    pv, node = self._hover_refiner.pick_best_pv(near_move)
+                    self.set_animating_pv(pv, node)
                 elif self.animating_pv is not None:
                     self.set_animating_pv(None, None)  # any click kills PV from label/move
             if inside and self.animating_pv is not None:
@@ -1142,10 +1145,9 @@ class BadukPanWidget(Widget):
         self.animating_pv_index = None
         if pv is None:
             self.animating_pv = None
-        elif node is not None and (
-            not self.animating_pv or not (self.animating_pv[0] == pv and self.animating_pv[1] == node)
-        ):
-            self.animating_pv = (pv, node, time.time(), self.last_mouse_pos)
+            self._hover_refiner.on_pv_cleared()
+        elif node is not None:
+            self._hover_refiner.on_pv_selected(pv, node)
         self.redraw_hover_contents_trigger()
 
     def adjust_animate_pv_index(self, delta=1):
