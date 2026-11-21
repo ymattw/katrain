@@ -1122,6 +1122,9 @@
         LoadSourceTab:
             text: l10n._('Fox Weiqi')
             on_state: if self.state=='down': root.select_source('fox')
+        LoadSourceTab:
+            text: l10n._('OGS')
+            on_state: if self.state=='down': root.select_source('ogs')
     AnchorLayout:
         size_hint_y: None
         height: dp(48)
@@ -1158,6 +1161,9 @@
         Screen:
             name: 'fox'
             id: fox_screen
+        Screen:
+            name: 'ogs'
+            id: ogs_screen
 
 <SaveSGFPopup>:
     filesel: filesel

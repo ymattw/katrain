@@ -53,3 +53,9 @@ msgstr "Loading game..."
 
 msgid "{} moves"
 msgstr "{} moves"
+
+msgid "OGS"
+msgstr "OGS"
+
+msgid "OGS username"
+msgstr "OGS username"

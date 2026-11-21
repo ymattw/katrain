@@ -38,6 +38,7 @@ from katrain.core.constants import (
 from katrain.core.engine import resolve_engine_backend
 from katrain.core.fox import FoxGameSource
 from katrain.core.lang import i18n, rank_label
+from katrain.core.ogs import OgsGameSource
 from katrain.core.utils import PATHS, find_package_resource
 from katrain.gui.theme import Theme
 from katrain.gui.widgets.base import BackgroundMixin
@@ -860,7 +861,7 @@ class LoadSGFPopup(BaseConfigPopup):
         self.filesel.select_string = "Load File"
         # One panel per online source, keyed like the tab/screen names.
         self.online_panels = {}
-        for name, source in (("fox", FoxGameSource()),):
+        for name, source in (("fox", FoxGameSource()), ("ogs", OgsGameSource())):
             panel = OnlineGamePanel(source=source, katrain=katrain, load_popup=self)
             self.ids[f"{name}_screen"].add_widget(panel)
             self.online_panels[name] = panel
