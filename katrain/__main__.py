@@ -781,7 +781,10 @@ class KaTrainGui(Screen, KaTrainBase):
         elif keycode[1] in Theme.KEY_ZEN:
             self.zen = (self.zen + 1) % 3
         elif keycode[1] in Theme.KEY_NAV_PREV:
-            self("undo", 1 + shift_pressed * 9 + ctrl_pressed * 9999)
+            if ctrl_pressed and not shift_pressed:
+                self.controls.move_tree.undo_deletion()  # restore deleted/pruned branch; no-op if nothing to restore
+            else:
+                self("undo", 1 + shift_pressed * 9 + ctrl_pressed * 9999)
         elif keycode[1] in Theme.KEY_NAV_NEXT:
             self("redo", 1 + shift_pressed * 9 + ctrl_pressed * 9999)
         elif keycode[1] == Theme.KEY_NAV_GAME_START:
