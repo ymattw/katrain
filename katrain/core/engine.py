@@ -374,6 +374,8 @@ class KataGoEngine(BaseEngine):
                     try:
                         if callback and results_exist:
                             callback(analysis, partial_result)
+                        elif not partial_result and not results_exist and error_callback:
+                            error_callback(analysis)
                     except Exception as e:
                         self.katrain.log(f"Error in engine callback for query {query_id}: {e}", OUTPUT_ERROR)
                         traceback.print_exc()
