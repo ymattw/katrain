@@ -20,6 +20,9 @@ Current upstream base: **v1.20.0**
 - **Load games from Fox Weiqi (foxwq.com)** ([design doc](docs/fox.md)):
   search recent public games by username directly from the Load dialog, with
   result-colored rows and colored stone indicators.
+
+  <img alt="Load games from Fox Weiqi" src="screenshots/load-from-fox.jpg" width="680">
+
 - **Load games from OGS (online-go.com)** ([design doc](docs/ogs.md)):
   search and paginate public games by username from the Load dialog.
 - **Automatic KataGo thread tuning** ([design doc](docs/auto-threads.md)):
@@ -34,6 +37,8 @@ Current upstream base: **v1.20.0**
   <kbd>Ctrl</kbd>+<kbd>V</kbd> with a board screenshot in the clipboard to
   auto-detect the grid (`19`/`13`/`9`) and stones, tweak corners or turn
   (`Black`/`White`), and jump straight into KataGo analysis.
+
+  <img alt="Import board from clipboard screenshot" src="screenshots/paste-from-clipboard.jpg" width="680">
 
 ## Building from this fork
 
