@@ -58,3 +58,15 @@ msgstr "OGS"
 
 msgid "OGS username"
 msgstr "OGS ユーザー名"
+
+msgid "Import board from screenshot"
+msgstr "スクリーンショットから盤面を読み込む"
+
+msgid "Next to play"
+msgstr "次の手番"
+
+msgid "Komi"
+msgstr "コミ"
+
+msgid "Cancel"
+msgstr "キャンセル"

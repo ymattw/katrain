@@ -58,3 +58,15 @@ msgstr "OGS"
 
 msgid "OGS username"
 msgstr "OGS 사용자 이름"
+
+msgid "Import board from screenshot"
+msgstr "스크린샷에서 바둑판 불러오기"
+
+msgid "Next to play"
+msgstr "다음 차례"
+
+msgid "Komi"
+msgstr "덤"
+
+msgid "Cancel"
+msgstr "취소"

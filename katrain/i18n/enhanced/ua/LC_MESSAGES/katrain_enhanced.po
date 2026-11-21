@@ -58,3 +58,15 @@ msgstr "OGS"
 
 msgid "OGS username"
 msgstr "Ім'я користувача OGS"
+
+msgid "Import board from screenshot"
+msgstr "Імпорт дошки зі скриншота"
+
+msgid "Next to play"
+msgstr "Хід"
+
+msgid "Komi"
+msgstr "Комі"
+
+msgid "Cancel"
+msgstr "Скасувати"

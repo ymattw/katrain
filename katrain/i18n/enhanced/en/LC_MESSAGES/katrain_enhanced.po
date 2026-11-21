@@ -59,3 +59,15 @@ msgstr "OGS"
 
 msgid "OGS username"
 msgstr "OGS username"
+
+msgid "Import board from screenshot"
+msgstr "Import board from screenshot"
+
+msgid "Next to play"
+msgstr "Next to play"
+
+msgid "Komi"
+msgstr "Komi"
+
+msgid "Cancel"
+msgstr "Cancel"

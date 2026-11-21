@@ -98,6 +98,7 @@ from katrain.core.contribute_engine import KataGoContributeEngine
 from katrain.core.game import BaseGame, Game, IllegalMoveException, KaTrainSGF
 from katrain.core.lang import DEFAULT_LANGUAGE, i18n
 from katrain.core.remote_engine import make_engine
+from katrain.core.screenshot import read_clipboard_image
 from katrain.gui.badukpan import AnalysisControls, BadukPanControls, BadukPanWidget  # noqa: F401
 from katrain.gui.controlspanel import ControlsPanel  # noqa: F401
 from katrain.gui.popups import (
@@ -115,6 +116,7 @@ from katrain.gui.popups import (
 from katrain.gui.sound import play_sound
 from katrain.gui.theme import Theme
 from katrain.gui.widgets.panels import PlayerSetupBlock
+from katrain.gui.widgets.screenshot_popup import ScreenshotImportModal
 
 
 class KaTrainGui(Screen, KaTrainBase):
@@ -665,7 +667,17 @@ class KaTrainGui(Screen, KaTrainBase):
         popup_contents.filesel.on_submit = readfile
         save_game_popup.open()
 
+    def _open_screenshot_popup(self, image):
+        if self.contributing:
+            return
+        ScreenshotImportModal(self, image).open()
+
     def load_sgf_from_clipboard(self):
+        image = read_clipboard_image()
+        if image is not None:
+            self._open_screenshot_popup(image)
+            return
+
         clipboard = Clipboard.paste()
         if not clipboard:
             self.controls.set_status("Ctrl-V pressed but clipboard is empty.", STATUS_INFO)

@@ -58,3 +58,15 @@ msgstr "OGS"
 
 msgid "OGS username"
 msgstr "OGS kullanıcı adı"
+
+msgid "Import board from screenshot"
+msgstr "Ekran görüntüsünden tahta içe aktar"
+
+msgid "Next to play"
+msgstr "Sıradaki oyuncu"
+
+msgid "Komi"
+msgstr "Komi"
+
+msgid "Cancel"
+msgstr "İptal"

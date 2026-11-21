@@ -58,3 +58,15 @@ msgstr "OGS"
 
 msgid "OGS username"
 msgstr "Nom d'utilisateur OGS"
+
+msgid "Import board from screenshot"
+msgstr "Importer le plateau depuis une capture"
+
+msgid "Next to play"
+msgstr "Au trait"
+
+msgid "Komi"
+msgstr "Komi"
+
+msgid "Cancel"
+msgstr "Annuler"

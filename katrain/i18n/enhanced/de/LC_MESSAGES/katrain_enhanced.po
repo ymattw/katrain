@@ -58,3 +58,15 @@ msgstr "OGS"
 
 msgid "OGS username"
 msgstr "OGS-Benutzername"
+
+msgid "Import board from screenshot"
+msgstr "Brett aus Screenshot importieren"
+
+msgid "Next to play"
+msgstr "Am Zug"
+
+msgid "Komi"
+msgstr "Komi"
+
+msgid "Cancel"
+msgstr "Abbrechen"

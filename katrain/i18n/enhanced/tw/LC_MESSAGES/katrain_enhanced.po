@@ -58,3 +58,15 @@ msgstr "OGS"
 
 msgid "OGS username"
 msgstr "OGS 使用者名稱"
+
+msgid "Import board from screenshot"
+msgstr "從截圖匯入棋局"
+
+msgid "Next to play"
+msgstr "下一手"
+
+msgid "Komi"
+msgstr "貼目"
+
+msgid "Cancel"
+msgstr "取消"
