@@ -29,6 +29,11 @@ Current upstream base: **v1.20.0**
   ([design doc](docs/hover-pv.md)): hovering a shallow candidate move pauses
   and drains background full-game analysis so KataGo deepens its variation
   promptly, then resumes without discarding completed nodes.
+- **Import board from clipboard screenshot**
+  ([design doc](docs/screenshot-import.md)): press <kbd>Cmd</kbd>+<kbd>V</kbd> /
+  <kbd>Ctrl</kbd>+<kbd>V</kbd> with a board screenshot in the clipboard to
+  auto-detect the grid (`19`/`13`/`9`) and stones, tweak corners or turn
+  (`Black`/`White`), and jump straight into KataGo analysis.
 
 ## Building from this fork
 
