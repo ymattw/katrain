@@ -1,5 +1,6 @@
 #:kivy 2.3.0
 #:import i18n katrain.core.lang.i18n
+#:import l10n katrain.core.l10n.l10n
 #:import expanduser os.path.expanduser
 #:import abspath os.path.abspath
 #:import kivy_version kivy.__version__
@@ -1094,13 +1095,36 @@
                 root.katrain("tsumego-frame", ko=ko.input_value, margin=margin.input_value)
                 root.popup.dismiss()
 
+<LoadSourceTab@SizedToggleButton>:
+    inactive_background_color: Theme.LIGHTER_BACKGROUND_COLOR
+    active_background_color: Theme.PLAY_ANALYZE_TAB_COLOR
+    ripple_color: Theme.LIGHTER_BACKGROUND_COLOR
+    text_color: self.inactive_background_color if self.state=='down' else self.active_background_color
+    size_hint_x: 1
+    size_hint_y: 1
+    _font_size: self.height * 0.45
+    group: 'load_source'
+    allow_no_selection: False
+
 <LoadSGFPopup>:
     fast: fast
     rewind: rewind
     filesel: filesel
     orientation: 'vertical'
+    BoxLayout:
+        size_hint_y: None
+        height: dp(40)
+        spacing: CP_SPACING
+        LoadSourceTab:
+            text: l10n._('Local machine')
+            state: 'down'
+            on_state: if self.state=='down': root.select_source('local')
+        LoadSourceTab:
+            text: l10n._('Fox Weiqi')
+            on_state: if self.state=='down': root.select_source('fox')
     AnchorLayout:
-        size_hint: 1,1
+        size_hint_y: None
+        height: dp(48)
         BoxLayout:
             size_hint: 0.5,1
             orientation: 'horizontal'
@@ -1121,13 +1145,19 @@
                 active: True
                 size_hint: 0.05,1
                 input_property: "general/load_sgf_rewind"
-    I18NFileBrowser:
-        id: filesel
-        multiselect: False
-        file_must_exist: True
-        filters: ["*.sgf","*.gib","*.ngf"]
-        path: "."
-        size_hint: 1,7
+    ScreenManager:
+        id: source_screens
+        Screen:
+            name: 'local'
+            I18NFileBrowser:
+                id: filesel
+                multiselect: False
+                file_must_exist: True
+                filters: ["*.sgf","*.gib","*.ngf"]
+                path: "."
+        Screen:
+            name: 'fox'
+            id: fox_screen
 
 <SaveSGFPopup>:
     filesel: filesel

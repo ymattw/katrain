@@ -1,0 +1,497 @@
+"""Panel for loading games from an online Go server (e.g. Fox, OGS)."""
+
+import re
+import threading
+
+from kivy.clock import Clock
+from kivy.lang import Builder
+from kivy.properties import BooleanProperty, ListProperty, ObjectProperty, StringProperty
+from kivy.uix.behaviors import ToggleButtonBehavior
+from kivy.uix.boxlayout import BoxLayout
+
+from katrain.core.constants import OUTPUT_ERROR
+from katrain.core.l10n import l10n
+from katrain.core.lang import i18n
+from katrain.gui.theme import GREEN, LIGHT_GREY, RED, to_hexcol
+
+_PAGE_SIZE = 10  # games fetched/rendered per page
+_QUERY_RE = re.compile(r"^[a-zA-Z0-9_-]+$")
+_KV_LOADED = False
+
+ONLINE_GAME_WIN_COLOR = GREEN
+ONLINE_GAME_LOSS_COLOR = RED
+ONLINE_GAME_DRAW_COLOR = LIGHT_GREY
+# Stone dots (●) in the online game list.
+ONLINE_GAME_STONE_COLORS = {"B": [0, 0, 0, 1], "W": [0.9, 0.9, 0.9, 1]}
+
+
+class RemoteGameRow(ToggleButtonBehavior, BoxLayout):
+    """A selectable remote game, rendered as aligned table columns.
+
+    A single click selects the row (toggle state); a double click emits
+    ``on_double_tap`` so the panel can load it.
+    """
+
+    __events__ = ("on_double_tap",)
+
+    game = ObjectProperty(None, allownone=True)
+    row_color = ListProperty([1, 1, 1, 1])
+    date_text = StringProperty("")
+    players_text = StringProperty("")
+    result_text = StringProperty("")
+    move_count = ObjectProperty(None, allownone=True)
+
+    def on_touch_down(self, touch):
+        if touch.is_double_tap and self.collide_point(*touch.pos):
+            self.dispatch("on_double_tap", touch)
+            return True
+        return super().on_touch_down(touch)
+
+    def on_double_tap(self, touch):
+        pass
+
+
+class OnlineGamePanel(BoxLayout):
+    """Query an :class:`OnlineGameSource` and load one of its games.
+
+    This panel is server-agnostic: it only ever asks the source for one specific
+    page via ``source.list_games_page(user, page, _PAGE_SIZE)`` and appends the
+    returned rows. All knowledge of *how* to page (a real cursor, or Fox's
+    "no cursor, so fetch everything on page 2 and cache it") lives in the
+    source. The panel just tracks which page is shown and whether another
+    exists.
+
+    All network calls run on worker threads; results are handed back to the
+    Kivy main thread with ``Clock.schedule_once``. ``busy`` serialises requests,
+    so a stale response can never land after a new search (see ``_request_seq``
+    for the defensive check).
+    """
+
+    source = ObjectProperty(None)
+    katrain = ObjectProperty(None)
+    load_popup = ObjectProperty(None, allownone=True)
+    selected_game = ObjectProperty(None, allownone=True)
+    has_more = BooleanProperty(False)
+    busy = BooleanProperty(False)
+    # Status shown under the query box. The text is built atomically in Python
+    # from a l10n key + args, and refreshed on a language switch via `i18n.callbacks`.
+    status_text = StringProperty("")
+    status_error = BooleanProperty(False)
+    query_valid = BooleanProperty(False)
+
+    def __init__(self, source, katrain, load_popup=None, **kwargs):
+        _ensure_kv_loaded()
+        super().__init__(**kwargs)
+        self.source = source
+        self.katrain = katrain
+        self.load_popup = load_popup
+        self._user = None
+        self._page = 0  # last successfully rendered page
+        self._shown = 0  # rows rendered so far
+        self._total = None  # total games, once the source knows it
+        # Incremented on every search; callbacks from older requests are dropped.
+        self._request_seq = 0
+        self._status_key = ""
+        self._status_args = ()
+        i18n.callbacks.append(self._on_language_change)
+        self.bind(selected_game=self._update_buttons, has_more=self._update_buttons, busy=self._update_buttons)
+        self.ids.query.bind(text=self._update_buttons)
+        Clock.schedule_once(self._restore_last_username, 0)
+
+    @staticmethod
+    def query_is_valid(text):
+        return bool(_QUERY_RE.match((text or "").strip()))
+
+    def _restore_last_username(self, *_args):
+        last = self.katrain.config(f"general/{self.source.key}_username", "")
+        if last:
+            self.ids.query.text = last
+        self._update_buttons()
+
+    # -- user actions -----------------------------------------------------
+
+    def search(self):
+        if self.busy:
+            return
+        query = self.ids.query.text.strip()
+        if not self.query_is_valid(query):
+            self._set_status("Please enter a username", error=True)
+            return
+        self._request_seq += 1
+        seq = self._request_seq
+        self._save_username(query)
+        self._reset_results()
+        self._set_status("Searching...")
+        self.busy = True
+        self._run(self._do_search, query, seq)
+
+    def show_more(self):
+        if self.busy:
+            return
+        self._load_page(self._page + 1)
+
+    def load_selected(self):
+        if self.busy or self.selected_game is None:
+            return
+        self.busy = True
+        self._set_status("Loading game...")
+        self._run(self._do_load, self.selected_game)
+
+    def on_submit(self):
+        if self._page:
+            self.load_selected()
+        else:
+            self.search()
+
+    # -- worker-thread side ----------------------------------------------
+
+    def _do_search(self, query, seq):
+        try:
+            user = self.source.lookup(query)
+            if user is None:
+                raise Exception("No matching user found")
+            page = self.source.list_games_page(user, 1, _PAGE_SIZE)
+        except Exception as e:
+            self.katrain.log(f"{self.source.display_name} search failed: {e}", OUTPUT_ERROR)
+            Clock.schedule_once(lambda _dt, error=e: self._search_failed(seq, error), 0)
+            return
+        Clock.schedule_once(lambda _dt: self._search_done(seq, user, page), 0)
+
+    def _do_load_page(self, page, seq):
+        try:
+            result = self.source.list_games_page(self._user, page, _PAGE_SIZE)
+        except Exception as e:
+            self.katrain.log(f"{self.source.display_name} page {page} failed: {e}", OUTPUT_ERROR)
+            Clock.schedule_once(lambda _dt, error=e: self._page_failed(seq, error), 0)
+            return
+        Clock.schedule_once(lambda _dt: self._page_loaded(seq, page, result), 0)
+
+    def _do_load(self, game):
+        try:
+            sgf = self.source.fetch_sgf(game)
+        except Exception as e:
+            self.katrain.log(f"{self.source.display_name} download failed: {e}", OUTPUT_ERROR)
+            Clock.schedule_once(lambda _dt, error=e: self._load_failed(error), 0)
+            return
+        Clock.schedule_once(lambda _dt: self._load_done(sgf), 0)
+
+    # -- main-thread callbacks -------------------------------------------
+
+    def _search_done(self, seq, user, page):
+        if seq != self._request_seq:
+            return
+        self.busy = False
+        self._user = user
+        if not page.games:
+            self._total = page.total
+            self._set_status("This account has no public games")
+            self._update_buttons()
+            return
+        self._render_page(1, page)
+
+    def _search_failed(self, seq, error):
+        if seq != self._request_seq:
+            return
+        self.busy = False
+        self._set_status(str(error), error=True)
+
+    def _load_page(self, page):
+        if self._user is None:
+            return
+        self.busy = True
+        self._set_status("Loading more games...")
+        self._run(self._do_load_page, page, self._request_seq)
+
+    def _page_loaded(self, seq, page, result):
+        if seq != self._request_seq:
+            return
+        self.busy = False
+        self._render_page(page, result)
+
+    def _page_failed(self, seq, error):
+        if seq != self._request_seq:
+            return
+        self.busy = False
+        # Keep the rows already shown; Show more stays available as a retry.
+        self._set_status(str(error), error=True)
+        self._update_buttons()
+
+    def _load_failed(self, error):
+        self.busy = False
+        self._set_status(str(error), error=True)
+
+    def _load_done(self, sgf):
+        self.busy = False
+        fast = bool(self.load_popup.fast.active) if self.load_popup else False
+        rewind = bool(self.load_popup.rewind.active) if self.load_popup else True
+        if self.load_popup is not None:
+            self.load_popup.update_config(False)
+            self.katrain.save_config("general")
+            if self.load_popup.popup is not None:
+                self.load_popup.popup.dismiss()
+        self.katrain.load_sgf_content(sgf, fast=fast, rewind=rewind)
+
+    # -- helpers ----------------------------------------------------------
+
+    def _render_page(self, page, result):
+        for game in result.games:
+            self.ids.game_list.add_widget(self._make_row(game))
+        self._page = page
+        self._shown += len(result.games)
+        self._total = result.total
+        self.has_more = result.has_more
+        self._update_list_status()
+        self._update_buttons()
+
+    def _reset_results(self):
+        self._user = None
+        self._page = 0
+        self._shown = 0
+        self._total = None
+        self.selected_game = None
+        self.has_more = False
+        self._clear_rows()
+
+    def _update_list_status(self):
+        if self._total is None:
+            self._set_status("Showing {} games", self._shown)
+        else:
+            self._set_status("Showing {} of {} games", self._shown, self._total)
+
+    @staticmethod
+    def _escape_markup(text):
+        # Kivy markup treats [, ] and & specially; entities are expanded after
+        # parsing, so & must be escaped first.
+        return (text or "").replace("&", "&amp;").replace("[", "&bl;").replace("]", "&br;")
+
+    @classmethod
+    def _player_label(cls, name, rank):
+        name = cls._escape_markup(name)
+        return f"{name}({rank})" if rank else name
+
+    @classmethod
+    def _matchup(cls, game):
+        # A single filled circle glyph is used for both stones and coloured via
+        # markup. (U+26AB/U+26AA are not in KaTrain's CJK font, so U+25CF is used.)
+        def dot(color):
+            return f"[color={to_hexcol(color)}]\u25cf[/color]"
+
+        black = (dot(ONLINE_GAME_STONE_COLORS["B"]), game.black_name, game.black_rank)
+        white = (dot(ONLINE_GAME_STONE_COLORS["W"]), game.white_name, game.white_rank)
+        # Always list the queried user first.
+        first, second = (white, black) if game.user_color == "W" else (black, white)
+        return (
+            f"{first[0]} {cls._player_label(first[1], first[2])}"
+            f" vs {cls._player_label(second[1], second[2])} {second[0]}"
+        )
+
+    @staticmethod
+    def _row_color(game):
+        if not game.user_color or not game.result or game.result == "Draw":
+            return ONLINE_GAME_DRAW_COLOR
+        return ONLINE_GAME_WIN_COLOR if game.result.startswith(game.user_color) else ONLINE_GAME_LOSS_COLOR
+
+    def _make_row(self, game):
+        matchup = self._matchup(game)
+        row = RemoteGameRow(
+            game=game,
+            group="remote_game",
+            date_text=(game.date or "")[:16],
+            players_text=matchup,
+            result_text=game.result or "",
+            move_count=game.move_count,
+            row_color=self._row_color(game),
+        )
+        row.bind(state=self._on_row_state, on_double_tap=self._on_row_double_tap)
+        return row
+
+    def _on_row_state(self, row, state):
+        if state == "down":
+            self.selected_game = row.game
+        elif self.selected_game is row.game:
+            self.selected_game = None
+
+    def _on_row_double_tap(self, row, _touch):
+        self.selected_game = row.game
+        self.load_selected()
+
+    def _clear_rows(self):
+        self.ids.game_list.clear_widgets()
+
+    def _save_username(self, query):
+        general = self.katrain._config.setdefault("general", {})
+        key = f"{self.source.key}_username"
+        if general.get(key) != query:
+            general[key] = query
+            self.katrain.save_config("general")
+
+    def _update_buttons(self, *_args):
+        self.query_valid = self.query_is_valid(self.ids.query.text)
+        self.ids.search_button.disabled = self.busy or not self.query_valid
+        self.ids.load_button.disabled = self.busy or self.selected_game is None
+        self.ids.show_more_button.disabled = self.busy or not self.has_more
+
+    def _set_status(self, key, *args, error=False):
+        self._status_key = key
+        self._status_args = args
+        self.status_error = error
+        self._apply_status()
+
+    def _apply_status(self):
+        if not self._status_key:
+            self.status_text = ""
+        elif self._status_args:
+            self.status_text = l10n._(self._status_key).format(*self._status_args)
+        else:
+            self.status_text = l10n._(self._status_key)
+
+    def _on_language_change(self, _lang):
+        self._apply_status()
+
+    def _run(self, target, *args):
+        threading.Thread(target=target, args=args, daemon=True).start()
+
+
+_ONLINE_GAMES_KV = """
+#:import Theme katrain.gui.theme.Theme
+#:import i18n katrain.core.lang.i18n
+#:import l10n katrain.core.l10n.l10n
+#:set CP_SPACING Theme.CP_SPACING
+#:set CP_PADDING Theme.CP_PADDING
+
+<RemoteGameRow>:
+    size_hint: 1, None
+    height: dp(30)
+    orientation: 'horizontal'
+    padding: [dp(8), 0]
+    spacing: dp(6)
+    canvas.before:
+        Color:
+            rgba: Theme.LIGHTER_BACKGROUND_COLOR if self.state == 'down' else [0, 0, 0, 0]
+        Rectangle:
+            pos: self.pos
+            size: self.size
+    Label:
+        size_hint_x: None
+        width: dp(124)
+        text_size: self.size
+        halign: 'left'
+        valign: 'middle'
+        font_name: i18n.font_name
+        color: Theme.TEXT_COLOR
+        text: root.date_text
+    Label:
+        text_size: self.size
+        halign: 'left'
+        valign: 'middle'
+        shorten: True
+        markup: True
+        font_name: i18n.font_name
+        color: Theme.TEXT_COLOR
+        text: root.players_text
+    Label:
+        size_hint_x: None
+        width: dp(64)
+        text_size: self.size
+        halign: 'left'
+        valign: 'middle'
+        font_name: i18n.font_name
+        color: root.row_color
+        text: root.result_text
+    Label:
+        size_hint_x: None
+        width: dp(90)
+        text_size: self.size
+        halign: 'left'
+        valign: 'middle'
+        font_name: i18n.font_name
+        color: Theme.TEXT_COLOR
+        text: l10n._("{} moves").format(root.move_count) if root.move_count is not None else ''
+
+<OnlineGamePanel>:
+    orientation: 'vertical'
+    padding: CP_PADDING
+    spacing: CP_SPACING
+    BoxLayout:
+        orientation: 'horizontal'
+        spacing: CP_SPACING
+        BoxLayout:
+            orientation: 'vertical'
+            size_hint_x: 0.32
+            size_hint_y: None
+            height: self.minimum_height
+            pos_hint: {'top': 1}
+            spacing: CP_SPACING
+            DescriptionLabel:
+                text: l10n._(root.source.query_label) if root.source else ''
+                size_hint_y: None
+                height: dp(24)
+                halign: 'left'
+            TextInput:
+                id: query
+                multiline: False
+                size_hint_y: None
+                height: dp(38)
+                halign: 'left'
+                font_name: i18n.font_name
+                # Use the real line height so Kivy's `_adjust_viewport` leaves no negative
+                # viewport (which would make scroll_y jump while typing).
+                padding_y: max(0, (self.height - self.line_height) / 2)
+                on_text_validate: root.search()
+            AutoSizedRoundedRectangleButton:
+                id: search_button
+                text: l10n._('Search')
+                size_hint_y: None
+                height: dp(38) if root.query_valid else 0
+                opacity: 1 if root.query_valid else 0
+                padding_x: 15
+                on_release: root.search()
+            Label:
+                id: status
+                size_hint_y: None
+                height: dp(64)
+                text_size: self.width, None
+                halign: 'left'
+                valign: 'top'
+                font_name: i18n.font_name
+                color: Theme.ERROR_BORDER_COLOR if root.status_error else Theme.TEXT_COLOR
+                text: root.status_text
+        BoxLayout:
+            orientation: 'vertical'
+            size_hint_x: 0.68
+            spacing: CP_SPACING
+            ScrollView:
+                BoxLayout:
+                    id: game_list
+                    orientation: 'vertical'
+                    size_hint_y: None
+                    height: self.minimum_height
+                    spacing: 1
+            BoxLayout:
+                size_hint_y: None
+                height: dp(40)
+                spacing: CP_SPACING
+                AutoSizedRoundedRectangleButton:
+                    id: show_more_button
+                    text: l10n._('Show more')
+                    size_hint_y: 1
+                    width: self.label.texture_size[0] if root.has_more else 0
+                    padding_x: 15
+                    opacity: 1 if root.has_more else 0
+                    on_release: root.show_more()
+                Widget:
+                    size_hint_x: 1
+                AutoSizedRoundedRectangleButton:
+                    id: load_button
+                    text: l10n._('Load')
+                    size_hint_y: 1
+                    padding_x: 15
+                    on_release: root.load_selected()
+"""
+
+
+def _ensure_kv_loaded():
+    global _KV_LOADED
+    if not _KV_LOADED:
+        Builder.load_string(_ONLINE_GAMES_KV)
+        _KV_LOADED = True

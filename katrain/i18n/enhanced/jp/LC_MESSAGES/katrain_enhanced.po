@@ -1,0 +1,54 @@
+#
+msgid ""
+msgstr ""
+"Language: jp\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+msgid "No matching user found"
+msgstr "一致するユーザーが見つかりません"
+
+msgid "Loading game..."
+msgstr "対局を読み込み中..."
+
+msgid "Show more"
+msgstr "もっと見る"
+
+msgid "This account has no public games"
+msgstr "このアカウントには公開対局がありません"
+
+msgid "Search"
+msgstr "検索"
+
+msgid "Local machine"
+msgstr "ローカルファイル"
+
+msgid "Searching..."
+msgstr "検索中..."
+
+msgid "Load"
+msgstr "読み込む"
+
+msgid "Found {} games"
+msgstr "{}局見つかりました"
+
+msgid "Showing {} of {} games"
+msgstr "{} / {}局を表示中"
+
+msgid "{} moves"
+msgstr "{}手"
+
+msgid "Fox Weiqi"
+msgstr "Fox Weiqi"
+
+msgid "Fox username"
+msgstr "Foxユーザー名"
+
+msgid "Please enter a username"
+msgstr "ユーザー名を入力してください"
+
+msgid "Showing {} games"
+msgstr "{}局を表示中"
+
+msgid "Loading more games..."
+msgstr "さらに読み込み中..."

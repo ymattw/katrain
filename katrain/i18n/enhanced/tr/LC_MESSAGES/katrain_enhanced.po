@@ -1,0 +1,54 @@
+#
+msgid ""
+msgstr ""
+"Language: tr\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+msgid "No matching user found"
+msgstr "Eşleşen kullanıcı bulunamadı"
+
+msgid "Loading game..."
+msgstr "Maç yükleniyor..."
+
+msgid "Show more"
+msgstr "Daha fazla göster"
+
+msgid "This account has no public games"
+msgstr "Bu hesabın herkese açık maçı yok"
+
+msgid "Search"
+msgstr "Ara"
+
+msgid "Local machine"
+msgstr "Yerel makine"
+
+msgid "Searching..."
+msgstr "Aranıyor..."
+
+msgid "Load"
+msgstr "Yükle"
+
+msgid "Found {} games"
+msgstr "{} maç bulundu"
+
+msgid "Showing {} of {} games"
+msgstr "{} / {} maç gösteriliyor"
+
+msgid "{} moves"
+msgstr "{} hamle"
+
+msgid "Fox Weiqi"
+msgstr "Fox Weiqi"
+
+msgid "Fox username"
+msgstr "Fox kullanıcı adı"
+
+msgid "Please enter a username"
+msgstr "Lütfen bir kullanıcı adı girin"
+
+msgid "Showing {} games"
+msgstr "{} maç gösteriliyor"
+
+msgid "Loading more games..."
+msgstr "Daha fazla maç yükleniyor..."
